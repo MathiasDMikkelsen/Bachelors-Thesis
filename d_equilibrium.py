@@ -1,26 +1,30 @@
 from types import SimpleNamespace
 from scipy.optimize import minimize, bisect
-from a_hh import hhProblem
-from b_firm import firmProblem
+from a_hh import workerProblem
+import numpy as np
+from b_firm import FirmProblem
+from scipy import optimize
 
 class equilibirium():
     
     def __init__(self):
         # a. define vector of equilivirum variables
         parEq = self.parEq=SimpleNamespace()
-
+        solEq = self.solEq=SimpleNamespace()
+        
     def evaluate_equilibrium(self, w, p):
         parEq = self.parEq
+        solEq = self.solEq
         
         # a. optimal behavior of firm
-        firm = firmProblem()
-        firmSol = firm.firm(epsilon=0.5, w=w, tau_z=1, p=p)
+        firm = FirmProblem()
+        firmSol = firm.solve_firm(p=p, w=w)
         t = firmSol.t 
         y = firmSol.y
 
-        # b. optimal behavior of hould
-        hh = hhProblem()
-        hhSol = hh.hh(phi=0.5, tau=0.2, w=w, pb=p, pc=p, l=0)
+        # b. optimal behavior of household
+        hh = workerProblem()
+        hhSol = hh.worker(phi=1, tau=0.6, w=w, pb=p, pc=p, l=0)
         h = 1- hhSol.ell 
         c = hhSol.c
 
@@ -35,6 +39,24 @@ class equilibirium():
         print(f'excess goods market demand: {parEq.g_m:.2f}, excess labor market demand:={parEq.l_m:.2f}')
         
         return parEq
+    
+    def find_equilibrium(self):
+
+        parEq = self.parEq
+        solEq = self.solEq   
+
+        # c. bisection search
+        def obj(x):
+            w,p = x
+            self.evaluate_equilibrium(p,w)
+            return np.array([parEq.g_m, parEq.l_m])
+
+        res = optimize.root(obj,x0=[10, 15], method='hybr')
+        solEq.p = res.x[0]
+        solEq.w = res.x[1]
+        print(f'the equilibrium wage is {solEq.w:.4f}')
+        print(f'the equilibrium price is {solEq.p:.4f}')
 
 eq = equilibirium()
-equilibrium_price = eq.evaluate_equilibrium(w=1, p=1)
+eq.find_equilibrium()
+eq.evaluate_equilibrium(eq.solEq.w, eq.solEq.p)

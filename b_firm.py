@@ -1,101 +1,112 @@
-from types import SimpleNamespace
-from scipy.optimize import minimize
 import numpy as np
+from types import SimpleNamespace
 from scipy import optimize
-from scipy.optimize import differential_evolution
 
-class firmProblem():
+class FirmProblem:
     def __init__(self):
-        """ setup"""
-        
-        # a. define vector of parameters
-        parFirm = self.parFirm = SimpleNamespace()
-        
-        # b. exogenous parameters
-        parFirm.r = 1 # elasticity of substitution
-        parFirm.x = 1 # treshhold? not used for now
-        
-        # c. define solution set
-        solFirm = self.solFirm = SimpleNamespace()
-        
-        # d. solution parameters
-        solFirm.t = 0 # clean input
-        solFirm.z = 0 # polluting input
-      
-    def production(self,t,z):
-        """ production of firm """
-        
-        # a. retrieve exogenous parameters
-        parFirm = self.parFirm
-        
-        # b. return production function
-        return (parFirm.epsilon*t**parFirm.r + (1-parFirm.epsilon)*z**parFirm.r)**(1/parFirm.r)
-    
-    def firm(self, epsilon, w, tau_z, p):
-        """ maximize profit for firms"""
-        parFirm = self.parFirm
-        parFirm.epsilon = epsilon    # share of polluting input in production
-        parFirm.tau_z = tau_z        # pollution tax rate
-        parFirm.p = p                # price of output
-        r = parFirm.r
+        """Sets up default parameters and solution storage."""
+        self.par = SimpleNamespace()
 
-        # a. system of focs
-        def foc_error(vars):
-            t, z = vars
-            # common factor
-            # A = epsilon*t**r + (1 - epsilon)*z**r
-            # no division by zero
-            # if A <= 0 or t <= 0 or z <= 0:
-            #    return 1e6
-            # common = A**(1/r - 1)
-            mp_t = epsilon*t**(r-1)*self.production(t,z)**(1-r) # foc 1
-            mp_z = (1 - epsilon)*z**(r-1)*self.production(t,z)**(1-r) # foc 2
-            if t <= 0 or z <= 0 or self.production(t,z) <= 0:
-                return 1e6
-            err1= p*mp_t - w
-            err2 = p*mp_z - tau_z
-            return (err1**2 + err2**2) # return foc errors
+        # Example calibration:
+        self.par.r = 0.25         # elasticity exponent (try 0.5 before 0.05)
+        self.par.epsilon = 0.5   # CES weight on t
+        self.par.w = 6       # cost of t
+        self.par.tau_z = 12     # cost of z
+        self.par.p = 12.0        # price of output
 
-        # b. choose initial guess and update
-        #constraints = (
-        #    {'type':'ineq','fun': lambda v: v[0]},  # t >= 0
-        #    {'type':'ineq','fun': lambda v: v[1]},  # z >= 0
-        #)
+        # Where we'll store results
+        self.sol = SimpleNamespace(t=np.nan, z=np.nan, y=np.nan,
+                                   pi=np.nan, foc_error=np.nan)
 
-        # 3. Reasonable initial guess (strictly inside feasible region)
-        x0 = [0.1, 0.05]  # ensures z < x*t initially if x=1
+    def production(self, t, z):
+        """CES production function f(t,z) = [ eps*t^r + (1-eps)*z^r ]^(1/r)."""
+        p = self.par
+        # If t=0 or z=0, we allow it but must avoid negative powers for r<1
+        # => We'll handle that carefully in partial derivatives below
+        inside = p.epsilon*(t**p.r) + (1 - p.epsilon)*(z**p.r)
+        return inside**(1.0/p.r) if inside>0 else 0.0
 
-        # 4. Bounds for each variable
-        bnds = ((0,None),(0,None))
+    def partial_t(self, t, z):
+        """df/dt for the CES aggregator, assuming t>0, z>0, inside>0."""
+        p = self.par
+        fval = self.production(t,z)
+        if fval<=0 or t<=0:
+            return 0.0  # or define a large penalty if you prefer
+        # Standard CES partial:
+        return p.epsilon * (t**(p.r-1)) * (fval**(1-p.r))
 
-        # 5. Solve using SLSQP
-        res = optimize.minimize(foc_error, x0, method='SLSQP', bounds=bnds, constraints=None)
+    def partial_z(self, t, z):
+        """df/dz for the CES aggregator."""
+        p = self.par
+        fval = self.production(t,z)
+        if fval<=0 or z<=0:
+            return 0.0
+        return (1 - p.epsilon) * (z**(p.r-1)) * (fval**(1-p.r))
+
+    def foc_error(self, t, z):
+        """
+        Sum of squared FOCs:
+          FOC wrt t: p * df/dt - w = 0
+          FOC wrt z: p * df/dz - tau_z = 0
+        Returns (err1^2 + err2^2).
+        """
+        p = self.par
+        # If negative inputs, huge penalty so solver stays away
+        if t<0 or z<0:
+            return 1e12
+
+        mp_t = self.partial_t(t,z)
+        mp_z = self.partial_z(t,z)
+
+        err1 = p.p * mp_t - p.w
+        err2 = p.p * mp_z - p.tau_z
+        return err1**2 + err2**2
+
+    def solve_firm(self):
+        """
+        Minimize sum of squared FOCs subject to t>=0, z>=0.
+        We use SLSQP so we can specify constraints directly.
+        """
         
-        if not res.success:
-            print("WARNING: solver did not converge!")
-            
+        #self.par.w = w
+        #self.par.p = p
+        
+
+        f = lambda t,z: self.foc_error(t, z) 
+        obj = lambda x: f(x[0], x[1])
+        x0 = [2, 3]
+        bounds = ((0.1, None), (0.1, None))
+        res = optimize.minimize(obj,x0,bounds=bounds,method='L-BFGS-B')
+        
         t_opt, z_opt = res.x
-        y_opt = self.production(t_opt, z_opt)
-        
-        foc_err_value = foc_error([t_opt, z_opt])
-        print(f'FOC error at solution: {foc_err_value:.6f}')
+        # Evaluate final FOC error
+        final_err = self.foc_error(t_opt, z_opt)
 
-        # c. compute output and profit
+        # Compute production and profit
         y_opt = self.production(t_opt, z_opt)
-        profit = p * y_opt - w * t_opt - tau_z * z_opt
+        pi_opt = self.par.p*y_opt - self.par.w*t_opt - self.par.tau_z*z_opt
 
-        # d. save solution
-        self.solFirm.t = t_opt
-        self.solFirm.z = z_opt
-        self.solFirm.y = y_opt
-        self.solFirm.pi = profit
-        
-        # e. print solution
-        print(f"Converged = {res.success}, message = {res.message}")
-        print(f'solution: t={self.solFirm.t:.2f}, z={self.solFirm.z:.2f}, '
-          f'y={self.solFirm.y:.2f}, profit={self.solFirm.pi:.2f}')
-        return self.solFirm
-        
-# test
-model = firmProblem()
-model.firm(epsilon=0.5, w=10, tau_z=10, p=12) 
+        # Store and print
+        self.sol.t = t_opt
+        self.sol.z = z_opt
+        self.sol.y = y_opt
+        self.sol.pi = pi_opt
+        self.sol.foc_error = final_err
+
+        print("\n--- Results ---")
+        print("Success =", res.success, "| Message =", res.message)
+        print(f"t = {t_opt:.4f}, z = {z_opt:.4f}")
+        print(f"Production f(t,z) = {y_opt:.4f}")
+        print(f"Profit = {pi_opt:.4f}")
+        print(f"Sum of squared FOC errors = {final_err:.6g}")
+
+        return self.sol
+
+# ========== TEST THE CODE ==========
+
+model = FirmProblem()
+
+# Optional: override very small 'r' if you want to see the solver get stuck
+# model.par.r = 0.05
+
+model.solve_firm()

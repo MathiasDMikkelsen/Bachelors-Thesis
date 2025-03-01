@@ -12,7 +12,7 @@ class ProductionEconomyClass():
         par.kappa = 0.1 # home production
         par.omega = 10 # disutility of labor supply factor
         par.eta = 1.50 # curvature of disutility of labor supply
-        par.alpha = 0.50 # curvature of production function
+        par.alpha = 1 # curvature of production function
         par.Nw = 99 # number of workers
         par.phi1 = 0.7 # productivity of rich workers
         par.phi2 = 0.3 # productivity of poor workers
