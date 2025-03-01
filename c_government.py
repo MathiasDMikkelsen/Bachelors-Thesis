@@ -13,9 +13,9 @@ class govSWF():
         parGov = self.parGov = SimpleNamespace()
 
         # b. exogenous parameters
-        self.parGov.omega = 0.3   # inequality aversion parameter
-        self.parGov.g = 1         # government spending requirement
-        self.parGov.time = 1      # total time endowment
+        parGov.omega = 0.3   # inequality aversion parameter
+        parGov.g = 1         # government spending requirement
+        parGov.time = 1      # total time endowment
         
         # d. define solution set
         solGov = self.solGov = SimpleNamespace()
@@ -23,8 +23,8 @@ class govSWF():
         # e. solution parameters (to be determined by optimization)
         self.solGov.tau_w = None     # optimal labor income tax
         self.solGov.tau_z = None     # optimal pollution tax
-        self.solGov.l = None         # lump-sum transfer (isolated via the budget constraint)
-      
+        self.solGov.l = None         # lump-sum transfer (isolated via the budget constraint) 
+
     def swf(self, c, b, ell):
         """Social welfare function that calls the household’s utility function"""
 
@@ -37,7 +37,7 @@ class govSWF():
         # returning the welfare amount
         return (1 / (1 - parGov.omega))*worker.utility(c, b, ell)**(1-parGov.omega)
     
-    def government(self, c, b, ell, w, phi, z)
+    def government(self, w, phi, z):
         """ maximize welfare """
         
         # a. retrieve solution set and parameter vector
@@ -45,9 +45,6 @@ class govSWF():
         parGov = self.parGov
         
         # b. add endogenous parameters to parameter vector
-        parGov.c = c # optimal consumption of good c
-        parGov.b = b  # optimal consumption of good b
-        parGov.ell = ell  # optimal leisure supply
         parGov.w = w  # equilibrium wage
         parGov.z = z # optimal pollution
         
@@ -57,32 +54,34 @@ class govSWF():
         # d. define objective function as negative welfare with budget constraint inserted
         def obj(x):
             tau_w, tau_z, l = x # define variables
-            return -self.swf(c, b, parGov.time-(parGov.g+l-tau_z*z)/(tau_w*phi*w))
-        
-        # e. constraints
-        cons = [ 
-            {'type': 'ineq', 'fun': lambda x: x[0]},  # t >= 0
-            {'type': 'ineq', 'fun': lambda x: x[1]},  # z >= 0
+            worker = workerProblem()
+            sol = worker.worker(phi=phi, tau=tau_w, w=w, pb=1, pc=1, l=l)
+            return -self.swf(sol.c, sol.b, sol.ell)
+
+        # g. define bounds so each variable is between 0 and 1
+        bounds = [(0, 1), (0, 1), (0, None)]
+
+        # e. additional equality constraint: government budget must balance
+        cons = [
+            {'type': 'eq', 'fun': lambda x: x[0]*phi*w*(1-workerProblem().worker(phi=phi, tau=x[0], w=w, pb=1, pc=1, l=x[2]).ell) + x[1]*z + x[2] - parGov.g}
         ]
         
-        # f. initial guess
-        x0 = [1,1]  # start within feasible region 
+        # f. initial guess (three variables: tau_w, tau_z, and l)
+        x0 = [0.2, 0.1, 0.1]  # start within the feasible region
         
         # g. solve using a constrained optimizer
-        res = minimize(obj, x0, method='SLSQP', constraints=cons)
+        res = minimize(obj, x0, method='SLSQP', bounds=bounds, constraints=cons)
         
         # h. save solution
-        solFirm.t = res.x[0]
-        solFirm.z = res.x[1]
-        solFirm.y = self.production(solFirm.t, solFirm.z)
-        solFirm.pi = p*self.production(solFirm.t, solFirm.z)- w*solFirm.t - tau_z*solFirm.z
-        
+        solGov.tau_w = res.x[0]
+        solGov.tau_z = res.x[1]
+        solGov.l = res.x[2]
          # i. print solution
-        print(f'solution: t={solFirm.t:.2f}, z={solFirm.z:.2f}, y={solFirm.y:.2f}, profit: {solFirm.pi:2f}')
+        print(f'solution: tau_w={solGov.tau_w:.2f}, tau_z={solGov.tau_z:.2f}, l={solGov.l:.2f}')
         
         # j. return solution
-        return solFirm
+        return solGov
         
 # test
-model = firmProblem()
-model.firm(epsilon=0.5, w=1, tau_z=0.2, p=1)
+model = govSWF()
+model.government(w=15, phi=0.5, z=0.1)
