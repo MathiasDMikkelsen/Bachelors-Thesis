@@ -59,8 +59,7 @@ class govSWF():
         # 6. Additional equality constraint: government budget must balance.
         cons = [
             {'type': 'eq', 
-             'fun': lambda x: x[0] * phi * w * (1 - workerProblem().worker(phi=phi, tau=x[0], w=w, pb=1, pc=1, l=x[2]).ell)
-                               + x[1] * z + x[2] - parGov.g}
+             'fun': lambda x: x[0] * phi * w * (1 - workerProblem().worker(phi=phi, tau=x[0], w=w, pb=1, pc=1, l=x[2]).ell) + x[1] * z + x[2] - parGov.g}
         ]
         
         # 7. Initial guess (tau_w, tau_z, l).
@@ -82,4 +81,4 @@ class govSWF():
 
 # Test the model.
 model = govSWF()
-model.government(w=15, phi=0.5, z=0.1)
+model.government(w=11, phi=0.5, z=0.1)
