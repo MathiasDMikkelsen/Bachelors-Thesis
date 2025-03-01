@@ -47,7 +47,7 @@ class govSWF():
         # d. define objective function as negative profit
         def obj(x):
             t, z = x # define variables
-            return -p*self.production(self, t, z)+ w*t + tau_z*z
+            return -p*self.production(t, z)+ w*t + tau_z*z
         
         # e. constraints
         cons = [ 
