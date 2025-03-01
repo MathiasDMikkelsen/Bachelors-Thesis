@@ -11,8 +11,8 @@ class firmProblem():
         parFirm = self.parFirm = SimpleNamespace()
         
         # b. exogenous parameters
-        parFirm.r = 0.4 # elasticity of substitution
-        parFirm.x = 0.4 # treshhold?
+        parFirm.r = 0.5 # elasticity of substitution
+        parFirm.x = 1 # treshhold? not used for now
         
         # c. define solution set
         solFirm = self.solFirm = SimpleNamespace()
@@ -48,7 +48,7 @@ class firmProblem():
         # d. define objective function as negative profit
         def obj(x):
             t, z = x # define variables
-            return -p*self.production(self, t, z)+ w*t + tau_z*z
+            return -p*self.production(t, z)+ w*t + tau_z*z
         
         # e. constraints
         cons = [ 
@@ -57,7 +57,7 @@ class firmProblem():
         ]
         
         # f. initial guess
-        x0 = [1,1]  # start within feasible region 
+        x0 = [0,0]  # start within feasible region 
         
         # g. solve using a constrained optimizer
         res = minimize(obj, x0, method='SLSQP', constraints=cons)
@@ -76,4 +76,4 @@ class firmProblem():
         
 # test
 model = firmProblem()
-model.firm(epsilon=0.5, w=1, tau_z=0.2, p=1)
+model.firm(epsilon=0.5, w=1, tau_z=1, p=3) # no convergence, which is expected with a ces production function

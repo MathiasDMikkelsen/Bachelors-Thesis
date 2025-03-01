@@ -6,21 +6,27 @@ from b_firm import firmProblem
 class equilibirium():
     
     def __init__(self):
-    
-        # b. supply 
+        """ setup """
         par = self.par = SimpleNamespace()
         par.c_s = 1
 
-    def market_clearing_excess(self, pc):
-        
-        # c. calculate demand
-        model = workerProblem()
-        model.worker(phi=0.5,tau=0.2, w=1, pb=1, pc=pc, l=0)
-        demand=model.sol.c
-        supply = self.par.c_s
-        excess_demand = demand -supply
-        print (f'Excess supply: {excess_demand:.2f}')
-        return excess_demand
+    def evaluate_equilibrium(self):
+        """ evaluate equilirium """
+
+        par = self.par
+        sol = self.sol
+
+        # a. optimal behavior of firm
+        self.firm()
+        sol.pi = sol.Pi/par.Nw
+
+        # b. optimal behavior of households
+        self.workers1()
+        self.workers2()
+
+        # c. market clearing
+        sol.goods_mkt_clearing = par.Nw*sol.c1_w_star + par.Nw*sol.c2_w_star  - sol.y_star
+        sol.labor_mkt_clearing = par.Nw*sol.l_w1_star + par.Nw*sol.l_w2_star - sol.l_agg_star
 
     def find_equilibirum(self, lower=0.1, upper=5):
         eq_pc = bisect(self.market_clearing_excess, lower, upper)
