@@ -1,88 +1,85 @@
 from types import SimpleNamespace
 from scipy.optimize import minimize
 import numpy as np
-from scipy import optimize
 from a_hh import workerProblem
-from b_firm import firmProblem
 
 class govSWF():
     def __init__(self):
-        """ setup"""
-        
-        # a. define vector of parameters
+        """setup"""
+        # 1. Define the parameter vector.
         parGov = self.parGov = SimpleNamespace()
-
-        # b. exogenous parameters
-        self.parGov.omega = 0.3   # inequality aversion parameter
-        self.parGov.g = 1         # government spending requirement
-        self.parGov.time = 1      # total time endowment
         
-        # d. define solution set
+        # 2. Set exogenous parameters.
+        parGov.omega = 0.3   # inequality aversion parameter
+        parGov.g = 1         # government spending requirement
+        parGov.time = 1      # total time endowment
+        
+        # 3. Define solution set.
         solGov = self.solGov = SimpleNamespace()
         
-        # e. solution parameters (to be determined by optimization)
-        self.solGov.tau_w = None     # optimal labor income tax
-        self.solGov.tau_z = None     # optimal pollution tax
-        self.solGov.l = None         # lump-sum transfer (isolated via the budget constraint)
-      
-    def swf(self, c, b, ell):
-        """Social welfare function that calls the household’s utility function"""
+        # 4. Initialize solution parameters (to be determined by optimization).
+        self.solGov.tau_w = None  # optimal labor income tax
+        self.solGov.tau_z = None  # optimal pollution tax
+        self.solGov.l = None      # lump-sum transfer
 
-        # retrieve exogenous parameters
+    def swf(self, c, b, ell):
+        """Social welfare function that calls the household's utility function."""
+        # 1. Retrieve exogenous parameters.
         parGov = self.parGov
         
-        # creating a worker instance and computing utility
+        # 2. Create a worker instance and compute utility.
         worker = workerProblem()
         
-        # returning the welfare amount
-        return (1 / (1 - parGov.omega))*worker.utility(c, b, ell)**(1-parGov.omega)
+        # 3. Return the social welfare (weighted utility).
+        return (1 / (1 - parGov.omega)) * worker.utility(c, b, ell)**(1 - parGov.omega)
     
-    def government(self, c, b, ell, w, phi, z)
-        """ maximize welfare """
-        
-        # a. retrieve solution set and parameter vector
+    def government(self, w, phi, z):
+        """Maximize welfare by choosing optimal taxes and transfers."""
+        # 1. Retrieve solution set and parameter vector.
         solGov = self.solGov
         parGov = self.parGov
         
-        # b. add endogenous parameters to parameter vector
-        parGov.c = c # optimal consumption of good c
-        parGov.b = b  # optimal consumption of good b
-        parGov.ell = ell  # optimal leisure supply
+        # 2. Add endogenous parameters.
         parGov.w = w  # equilibrium wage
-        parGov.z = z # optimal pollution
+        parGov.z = z  # optimal pollution
         
-        # c. add variable parameters to parameter vector
+        # 3. Add variable parameters.
         parGov.phi = phi  # share of polluting input in production
         
-        # d. define objective function as negative welfare with budget constraint inserted
+        # 4. Define the objective function (negative SWF).
         def obj(x):
-            tau_w, tau_z, l = x # define variables
-            return -self.swf(c, b, parGov.time-(parGov.g+l-tau_z*z)/(tau_w*phi*w))
+            tau_w, tau_z, l = x  # decision variables
+            worker = workerProblem()  # call the worker problem
+            sol = worker.worker(phi=phi, tau=tau_w, w=w, pb=1, pc=1, l=l)  # optimal worker solution
+            return -self.swf(sol.c, sol.b, sol.ell)
         
-        # e. constraints
-        cons = [ 
-            {'type': 'ineq', 'fun': lambda x: x[0]},  # t >= 0
-            {'type': 'ineq', 'fun': lambda x: x[1]},  # z >= 0
+        # 5. Define bounds: tau_w and tau_z between 0 and 1; l nonnegative.
+        bounds = [(0, 1), (0, 1), (0, None)]
+        
+        # 6. Additional equality constraint: government budget must balance.
+        cons = [
+            {'type': 'eq', 
+             'fun': lambda x: x[0] * phi * w * (1 - workerProblem().worker(phi=phi, tau=x[0], w=w, pb=1, pc=1, l=x[2]).ell)
+                               + x[1] * z + x[2] - parGov.g}
         ]
         
-        # f. initial guess
-        x0 = [1,1]  # start within feasible region 
+        # 7. Initial guess (tau_w, tau_z, l).
+        x0 = [0.2, 0.1, 0.1]  # start within the feasible region
         
-        # g. solve using a constrained optimizer
-        res = minimize(obj, x0, method='SLSQP', constraints=cons)
+        # 8. Solve using a constrained optimizer.
+        res = minimize(obj, x0, method='SLSQP', bounds=bounds, constraints=cons)
         
-        # h. save solution
-        solFirm.t = res.x[0]
-        solFirm.z = res.x[1]
-        solFirm.y = self.production(solFirm.t, solFirm.z)
-        solFirm.pi = p*self.production(solFirm.t, solFirm.z)- w*solFirm.t - tau_z*solFirm.z
+        # 9. Save the solution.
+        solGov.tau_w = res.x[0]
+        solGov.tau_z = res.x[1]
+        solGov.l = res.x[2]
         
-         # i. print solution
-        print(f'solution: t={solFirm.t:.2f}, z={solFirm.z:.2f}, y={solFirm.y:.2f}, profit: {solFirm.pi:2f}')
+        # 10. Print the solution.
+        print(f'solution: tau_w={solGov.tau_w:.2f}, tau_z={solGov.tau_z:.2f}, l={solGov.l:.2f}')
         
-        # j. return solution
-        return solFirm
-        
-# test
-model = firmProblem()
-model.firm(epsilon=0.5, w=1, tau_z=0.2, p=1)
+        # 11. Return the solution set.
+        return solGov
+
+# Test the model.
+model = govSWF()
+model.government(w=15, phi=0.5, z=0.1)
