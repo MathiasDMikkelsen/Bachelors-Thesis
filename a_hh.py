@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import numpy as np
 from scipy import optimize
 
-class hhProblem():
+class workerProblem():
     
     def __init__(self):
         """ setup """
@@ -12,7 +12,7 @@ class hhProblem():
         par = self.par = SimpleNamespace()
         
         # b. exogenous parameters
-        par.t = 1 # total time endowment
+        par.time = 1 # total time endowment
         par.alpha = 0.5 # clean good utility weight
         par.beta = 0.5 # polluting good utility weight
         par.gamma = 0.5 # leisure utility weight
@@ -35,7 +35,7 @@ class hhProblem():
         # b. return utility function
         return par.alpha*np.log(c)+par.beta*np.log(b-par.b0)+par.gamma*np.log(ell) 
     
-    def hh(self, phi, tau, w, pb, pc, l): 
+    def worker(self, phi, tau, w, pb, pc, l): 
         """ maximize utility for workers """
         
         # a. retrieve solution set and parameter vector
@@ -81,7 +81,8 @@ class hhProblem():
         
         # j. return solution
         return sol
+
 # test
-model = hhProblem()
-model.hh(phi=0.5, tau=0.2, w=1, pb=1, pc=1, l=0)
+model = workerProblem()
+model.worker(phi=0.5, tau=0.2, w=1, pb=1, pc=1, l=0)
 
