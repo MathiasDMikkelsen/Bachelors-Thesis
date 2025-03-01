@@ -61,7 +61,7 @@ class workerProblem():
         cons = [ 
             {'type': 'ineq', 'fun': lambda x: x[0]},  # ell >= 0
             {'type': 'ineq', 'fun': lambda x: x[1] - par.b0},  # b >= b0
-            {'type': 'ineq', 'fun': lambda x: (par.w*(1-tau)*(par.t-x[0])-x[1]*par.pb)/par.pc},  # c >= 0
+            {'type': 'ineq', 'fun': lambda x: (par.w*(1-tau)*(par.time-x[0])-x[1]*par.pb)/par.pc},  # c >= 0
             {'type': 'ineq', 'fun': lambda x: par.time - x[0]}  # ell <= t (upper bound)
         ]
 
