@@ -2,6 +2,8 @@ from types import SimpleNamespace
 from scipy.optimize import minimize
 import numpy as np
 from scipy import optimize
+from a_hh import workerProblem
+from b_firm import firmProblem
 
 class govSWF():
     def __init__(self):
@@ -9,45 +11,53 @@ class govSWF():
         
         # a. define vector of parameters
         parGov = self.parGov = SimpleNamespace()
-        
+
         # b. exogenous parameters
-        parGov.o = 0.3
+        self.parGov.omega = 0.3   # inequality aversion parameter
+        self.parGov.g = 1         # government spending requirement
+        self.parGov.time = 1      # total time endowment
         
-        # c. define solution set
+        # d. define solution set
         solGov = self.solGov = SimpleNamespace()
         
-        # d. solution parameters
-        solGov.t = 0 # clean input
-        solGov.z = 0 # polluting input
+        # e. solution parameters (to be determined by optimization)
+        self.solGov.tau_w = None     # optimal labor income tax
+        self.solGov.tau_z = None     # optimal pollution tax
+        self.solGov.l = None         # lump-sum transfer (isolated via the budget constraint)
       
-    def production(self,t,z):
-        """ production of firm """
+    def swf(self, c, b, ell):
+        """Social welfare function that calls the household’s utility function"""
+
+        # retrieve exogenous parameters
+        parGov = self.parGov
         
-        # a. retrieve exogenous parameters
-        parFirm = self.parFirm
+        # creating a worker instance and computing utility
+        worker = workerProblem()
         
-        # b. return production function
-        return (parFirm.epsilon*t**parFirm.r + (1-parFirm.epsilon)*z**parFirm.r)**(1/parFirm.r)*(1 if z<=parFirm.x*t else 0)
+        # returning the welfare amount
+        return (1 / (1 - parGov.omega))*worker.utility(c, b, ell)**(1-parGov.omega)
     
-    def firm(self, epsilon, w, tau_z, p):
-        """ maximize profit for firms """
+    def government(self, c, b, ell, w, phi, z)
+        """ maximize welfare """
         
         # a. retrieve solution set and parameter vector
-        solFirm = self.solFirm
-        parFirm = self.parFirm
+        solGov = self.solGov
+        parGov = self.parGov
         
         # b. add endogenous parameters to parameter vector
-        parFirm.w = w # wage
-        parFirm.p = p  # price of output
+        parGov.c = c # optimal consumption of good c
+        parGov.b = b  # optimal consumption of good b
+        parGov.ell = ell  # optimal leisure supply
+        parGov.w = w  # equilibrium wage
+        parGov.z = z # optimal pollution
         
         # c. add variable parameters to parameter vector
-        parFirm.epsilon = epsilon  # share of polluting input in production
-        parFirm.tau_z = tau_z      # pollution tax rate
+        parGov.phi = phi  # share of polluting input in production
         
-        # d. define objective function as negative profit
+        # d. define objective function as negative welfare with budget constraint inserted
         def obj(x):
-            t, z = x # define variables
-            return -p*self.production(self, t, z)+ w*t + tau_z*z
+            tau_w, tau_z, l = x # define variables
+            return -self.swf(c, b, parGov.time-(parGov.g+l-tau_z*z)/(tau_w*phi*w))
         
         # e. constraints
         cons = [ 
