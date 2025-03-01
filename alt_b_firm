@@ -1,0 +1,104 @@
+import numpy as np
+from types import SimpleNamespace
+from scipy import optimize
+import sympy as sm
+
+class FirmProblem:
+    def __init__(self):
+        # Example parameter initialization
+        self.par = SimpleNamespace(
+            r=0.25,        # Elasticity parameter
+            epsilon=0.5,   # Weight on capital
+            w=7.0,         # Wage rate
+            tau_z=17.0,    # Cost of other input
+            p=12.0         # Output price
+        )
+        self.sol = SimpleNamespace(
+            t=np.nan, z=np.nan, y=np.nan,
+            pi=np.nan, foc_error=np.nan
+        )
+
+    def production(self, t, z):
+        """Numerical CES production function."""
+        p = self.par
+        base = np.maximum(1e-10, p.epsilon*abs(t)**p.r + (1-p.epsilon)*abs(z)**p.r)
+        return base ** (1/p.r)
+
+    def foc_error(self, t, z):
+        """Foc error function (assumed defined elsewhere correctly)."""
+        t = max(t, 1e-10)
+        z = max(z, 1e-10)
+        p = self.par
+        # Example: using numerical finite differences or your own derivatives here...
+        # For illustration, assume we have some computed partial derivatives:
+        df_dt = p.epsilon * (t**(p.r-1)) * (self.production(t, z)**(1-p.r))
+        df_dz = (1-p.epsilon) * (z**(p.r-1)) * (self.production(t, z)**(1-p.r))
+        err1 = p.p * df_dt - p.w
+        err2 = p.p * df_dz - p.tau_z
+        return err1**2 + err2**2
+
+    def grad_foc_error(self, x):
+        """Placeholder gradient function. Replace with your analytical gradient."""
+        # For illustration, we use numerical approximation:
+        eps = 1e-6
+        t, z = x
+        f0 = self.foc_error(t, z)
+        d_t = (self.foc_error(t+eps, z) - f0) / eps
+        d_z = (self.foc_error(t, z+eps) - f0) / eps
+        return np.array([d_t, d_z])
+    
+    def solve_firm(self):
+        """Robust optimization with symbolic derivatives and two-stage minimization."""
+
+        
+        # Define an initial guess for the symbolic minimization:
+        # (Ensure x0 is defined before it is used!)
+        p = self.par
+        x0 = [
+            max(1.0, (p.w / (p.p * p.epsilon)) ** (1/(p.r))),
+            max(1.0, (p.tau_z / (p.p * (1-p.epsilon))) ** (1/(p.r)))
+        ]
+        
+        # Second, use an optimization method with the FOC error function:
+        res = optimize.minimize(
+            fun=lambda x: self.foc_error(x[0], x[1]),
+            x0=x0,
+            method='Nelder-Mead',
+            jac=lambda x: self.grad_foc_error(x),
+            bounds=((1e-6, None), (1e-6, None)),
+            options={
+                'ftol': 1e-12,
+                'gtol': 1e-12,
+                'maxfun': 15000,
+                'maxiter': 5000,
+                'maxls': 50
+            }
+        )
+        
+        # Store results
+        self.sol.t, self.sol.z = res.x
+        self.sol.y = self.production(self.sol.t, self.sol.z)
+        self.sol.pi = p.p * self.sol.y - p.w * self.sol.t - p.tau_z * self.sol.z
+        self.sol.foc_error = res.fun
+        
+        print(f"\nConverged: {res.success} ({res.message})")
+        print(f"t = {self.sol.t:.4f}, z = {self.sol.z:.4f}")
+        print(f"Y = {self.sol.y:.4f}, π = {self.sol.pi:.4f}")
+        print(f"FOC error: {self.sol.foc_error:.2f}")
+        
+        return self.sol
+
+# ========== TEST THE CODE ==========
+if __name__ == "__main__":
+    model = FirmProblem()
+    print("\nTest 1: Default parameters")
+    model.solve_firm()
+
+    print("\nTest 2: Higher wage (w=12)")
+    model.par.w = 12
+    model.solve_firm()
+
+    print("\nTest 3: Higher elasticity (r=0.9)")
+    model = FirmProblem()
+    model.par.r = 0.9
+    model.solve_firm()
