@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from scipy.optimize import bisect
 from a_hh import workerProblem
 import numpy as np
-from b_firm import firmProblem
+from b_firm_solved import firmProblem
 from scipy import optimize
 
 class equilibirium():
