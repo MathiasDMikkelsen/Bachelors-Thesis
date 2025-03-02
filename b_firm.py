@@ -98,6 +98,7 @@ class firmProblem:
         # return solution
         self.sol.t = best_t
         self.sol.z = best_z
+        self.sol.y = self.inside(best_t, best_z)**(1/(self.parFirm.r))
         return self.sol
 
 # test

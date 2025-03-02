@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from scipy.optimize import minimize, bisect
+from scipy.optimize import bisect
 from a_hh import workerProblem
 import numpy as np
 from b_firm import firmProblem
@@ -12,19 +12,18 @@ class equilibirium():
         parEq = self.parEq=SimpleNamespace()
         solEq = self.solEq=SimpleNamespace()
         
-    def evaluate_equilibrium(self, w, p):
+    def evaluate_equilibrium(self, p, w):
         parEq = self.parEq
-        solEq = self.solEq
         
         # a. optimal behavior of firm
         firm = firmProblem()
-        firmSol = firm.solve_firm(p=p, tau_z=2 ,w=w)
+        firmSol = firm.solve_firm(p=p, tau_z=0.25 ,w=w)
         t = firmSol.t 
         y = firmSol.y
 
         # b. optimal behavior of household
         hh = workerProblem()
-        hhSol = hh.worker(phi=1, tau=0.6, w=w, pb=p, pc=p, l=0)
+        hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=0)
         h = 1- hhSol.ell 
         c = hhSol.c
 
@@ -47,11 +46,11 @@ class equilibirium():
 
         # c. bisection search
         def obj(x):
-            w,p = x
+            p,w = x
             self.evaluate_equilibrium(p,w)
-            return np.array([parEq.g_m, parEq.l_m])
+            return parEq.g_m**2 + parEq.l_m**2
 
-        res = optimize.root(obj,x0=[0.1, 0.1], method='hybr')
+        res = optimize.minimize(obj,x0=[0.5, 0.5], method='L-BFGS-B', options={'ftol': 1e-12, 'gtol': 1e-12})
         solEq.p = res.x[0]
         solEq.w = res.x[1]
         print(f'the equilibrium wage is {solEq.w:.4f}')
