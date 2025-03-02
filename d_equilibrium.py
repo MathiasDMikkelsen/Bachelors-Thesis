@@ -23,8 +23,8 @@ class equilibirium():
 
         # b. optimal behavior of household
         hh = workerProblem()
-        hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=0)
-        h = 1- hhSol.ell 
+        hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=0.25*firmSol.z)
+        h = 1 - hhSol.ell 
         c = hhSol.c
 
         # c. excess demand
@@ -39,23 +39,59 @@ class equilibirium():
         
         return parEq
     
-    def find_equilibrium(self):
+    def find_equilibrium_iterative(self):
+        """
+        Iteratively update the wage and price.
+        1. For a fixed price, find the wage that zeroes the goods market excess demand.
+        2. Holding that wage fixed, find the price that zeroes the labor market excess demand.
+        3. Repeat until the price converges.
+        """
+        tol = 1e-6
+        max_iter = 50
 
-        parEq = self.parEq
-        solEq = self.solEq   
+        # initial guess for price
+        p_guess = 0.5
 
-        # c. bisection search
-        def obj(x):
-            p,w = x
-            self.evaluate_equilibrium(p,w)
-            return parEq.g_m**2 + parEq.l_m**2
+        for i in range(max_iter):
+            # Step 1: With current p_guess, find wage w_sol so that goods market clears.
+            def wage_obj(w):
+                # evaluate equilibrium for given (p_guess, w)
+                self.evaluate_equilibrium(p_guess, w)
+                return self.parEq.g_m  # we want g_m = 0
+            
+            try:
+                wage_sol = optimize.root_scalar(wage_obj, bracket=[0.1, 10.0],
+                                                method='bisect', xtol=tol).root
+            except Exception as e:
+                print(f"Error in wage root finding: {e}")
+                break
 
-        res = optimize.minimize(obj,x0=[0.5, 0.5], method='L-BFGS-B', options={'ftol': 1e-12, 'gtol': 1e-12})
-        solEq.p = res.x[0]
-        solEq.w = res.x[1]
-        print(f'the equilibrium wage is {solEq.w:.4f}')
-        print(f'the equilibrium price is {solEq.p:.4f}')
+            # Step 2: With wage fixed, update price by clearing the labor market.
+            def price_obj(p):
+                self.evaluate_equilibrium(p, wage_sol)
+                return self.parEq.l_m  # we want l_m = 0
+            
+            try:
+                p_new = optimize.root_scalar(price_obj, bracket=[0.1, 10.0],
+                                            method='bisect', xtol=tol).root
+            except Exception as e:
+                print(f"Error in price root finding: {e}")
+                break
+
+            print(f"Iteration {i+1}: p_old = {p_guess:.6f}, p_new = {p_new:.6f}, wage = {wage_sol:.6f}")
+            if abs(p_new - p_guess) < tol:
+                p_guess = p_new
+                break
+            
+            p_guess = p_new
+
+        self.solEq.p = p_guess
+        self.solEq.w = wage_sol
+        print(f"\nEquilibrium found: price = {self.solEq.p:.4f}, wage = {self.solEq.w:.4f}")
+        # Optionally, evaluate the final equilibrium to print excess demands:
+        self.evaluate_equilibrium(self.solEq.p, self.solEq.w)
+        return self.solEq
 
 eq = equilibirium()
-eq.find_equilibrium()
+eq.find_equilibrium_iterative()
 eq.evaluate_equilibrium(eq.solEq.w, eq.solEq.p)
