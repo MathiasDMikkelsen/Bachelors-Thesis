@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from scipy.optimize import minimize, bisect
 from a_hh import workerProblem
 import numpy as np
-from b_firm import FirmProblem
+from b_firm import firmProblem
 from scipy import optimize
 
 class equilibirium():
@@ -17,8 +17,8 @@ class equilibirium():
         solEq = self.solEq
         
         # a. optimal behavior of firm
-        firm = FirmProblem()
-        firmSol = firm.solve_firm(p=p, w=w)
+        firm = firmProblem()
+        firmSol = firm.solve_firm(p=p, tau_z=2 ,w=w)
         t = firmSol.t 
         y = firmSol.y
 
@@ -51,7 +51,7 @@ class equilibirium():
             self.evaluate_equilibrium(p,w)
             return np.array([parEq.g_m, parEq.l_m])
 
-        res = optimize.root(obj,x0=[10, 15], method='hybr')
+        res = optimize.root(obj,x0=[0.1, 0.1], method='hybr')
         solEq.p = res.x[0]
         solEq.w = res.x[1]
         print(f'the equilibrium wage is {solEq.w:.4f}')
