@@ -16,24 +16,13 @@ class firmProblem:
         # define solution vector
         self.sol = SimpleNamespace()
 
-    # define inside of production function (return 0 if inputs are negative)
-    def inside(self, t, z):
-        parFirm = self.parFirm
-        inside = parFirm.epsilon * (t ** parFirm.r) + (1 - parFirm.epsilon) * (z ** parFirm.r)
-        return inside if inside > 0 else 0.0
-
     # calculate foc errors
-    def foc_errors(self, t, z):
+    def foc_errors(self, t, z, y):
         parFirm = self.parFirm
-        f = self.inside(t, z)**(1/parFirm.r)
-        
-        # avoid division by zero or negative production
-        if self.inside(t, z) <= 0:
-            return np.array([np.nan, np.nan])
         
         # define focs
-        df_dt = parFirm.epsilon * (t ** (parFirm.r - 1)) * (f ** (1 - parFirm.r))
-        df_dz = (1 - parFirm.epsilon) * (z ** (parFirm.r - 1)) * (f ** (1 - parFirm.r))
+        df_dt = parFirm.epsilon * (t ** (parFirm.r - 1)) * y
+        df_dz = (1 - parFirm.epsilon) * (z ** (parFirm.r - 1)) * y
         
         # define errors
         err_t = parFirm.p * df_dt - parFirm.w
@@ -62,7 +51,7 @@ class firmProblem:
             # define objective as squared error on z's foc
             def obj_z(z):
                 foc = self.foc_errors(t_val, z[0])
-                return foc[0]**2
+                return foc[0]**2+foc[1]**2
 
             # starting guess
             z0 = [0.5]
@@ -89,7 +78,7 @@ class firmProblem:
                 best_z = z_val
 
             #  break early if total squared error is small
-            # if best_total_error < 1e-50:
+            #  if best_total_error < 1e-50:
             #   break
         
         # print solution
@@ -104,11 +93,13 @@ class firmProblem:
         optimal_profit = self.parFirm.p * self.sol.y - self.parFirm.w * self.sol.t - self.parFirm.tau_z * self.sol.z
         print(f"optimal profit: {optimal_profit:.8e}")
         
+        self.sol.profit = optimal_profit
+        
         
         return self.sol
 
 # test
 model = firmProblem()
-model.solve_firm(w=5, tau_z=2, p=10)
+model.solve_firm(w=2, tau_z=1, p=3)
 errors = model.foc_errors(model.sol.t, model.sol.z)
 print(f"foc errors: df/dt error = {errors[0]:.8e}, df/dz error = {errors[1]:.8e}")

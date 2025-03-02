@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 from a_hh import workerProblem
-from b_firm import firmProblem
+from b_firm_old import firmProblem
 from scipy import optimize
 import numpy as np
 
