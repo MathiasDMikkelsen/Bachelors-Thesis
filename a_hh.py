@@ -55,13 +55,13 @@ class workerProblem():
         # d. define objective function as negative utility
         def obj(x):
             ell, b = x # define variables
-            return -self.utility((par.w*(1-tau)*(par.time-ell)-b*par.pb)/par.pc,b,ell) # substitute c from budget constraint
+            return -self.utility((par.w*(1-tau)*(par.time-ell)-b*par.pb+par.l)/par.pc,b,ell) # substitute c from budget constraint
         
         # e. constraints
         cons = [ 
             {'type': 'ineq', 'fun': lambda x: x[0]},  # ell >= 0
             {'type': 'ineq', 'fun': lambda x: x[1] - par.b0},  # b >= b0
-            {'type': 'ineq', 'fun': lambda x: (par.w*(1-tau)*(par.time-x[0])-x[1]*par.pb)/par.pc},  # c >= 0
+            {'type': 'ineq', 'fun': lambda x: (par.w*(1-tau)*(par.time-x[0])-x[1]*par.pb+par.l)/par.pc},  # c >= 0
             {'type': 'ineq', 'fun': lambda x: par.time - x[0]}  # ell <= t (upper bound)
         ]
 
@@ -74,7 +74,7 @@ class workerProblem():
         # h. save solution
         sol.ell = res.x[0]
         sol.b = res.x[1]
-        sol.c = (par.w*(1-par.tau)*(par.time-sol.ell)-sol.b*par.pb)/par.pc # calculate c from budget constraint
+        sol.c = (par.w*(1-par.tau)*(par.time-sol.ell)-sol.b*par.pb+par.l)/par.pc # calculate c from budget constraint
         
         # i. print solution
         print(f'solution: ell={sol.ell:.2f}, b={sol.b:.2f}, c={sol.c:.2f}, budget: {sol.c*par.pc+sol.b*par.pb:2f}')
