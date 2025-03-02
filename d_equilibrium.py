@@ -19,17 +19,20 @@ class equilibirium():
         firm = firmProblem()
         firmSol = firm.solve_firm(p=p, tau_z=0.25 ,w=w)
         t = firmSol.t 
+        z = firmSol.z
         y = firmSol.y
+        
 
         # b. optimal behavior of household
         hh = workerProblem()
-        hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=0.25*firmSol.z)
+        hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=0.25*z+)
         h = 1 - hhSol.ell 
         c = hhSol.c
+        b = hhSol.b
 
         # c. excess demand
-        g_m = c-y # goods market excess demand
-        l_m = t-h # labor market excess demand
+        g_m = (c+b)-y # goods market excess demand
+        l_m = t-(1-hhSol.ell) # labor market excess demand
         
         # d. save parameters
         parEq.g_m = g_m
@@ -60,7 +63,7 @@ class equilibirium():
                 return self.parEq.g_m  # we want g_m = 0
             
             try:
-                wage_sol = optimize.root_scalar(wage_obj, bracket=[0.1, 10.0],
+                wage_sol = optimize.root_scalar(wage_obj, bracket=[0.1, 50.0],
                                                 method='bisect', xtol=tol).root
             except Exception as e:
                 print(f"Error in wage root finding: {e}")
@@ -72,7 +75,7 @@ class equilibirium():
                 return self.parEq.l_m  # we want l_m = 0
             
             try:
-                p_new = optimize.root_scalar(price_obj, bracket=[0.1, 10.0],
+                p_new = optimize.root_scalar(price_obj, bracket=[0.1, 50.0],
                                             method='bisect', xtol=tol).root
             except Exception as e:
                 print(f"Error in price root finding: {e}")
@@ -94,4 +97,4 @@ class equilibirium():
 
 eq = equilibirium()
 eq.find_equilibrium_iterative()
-eq.evaluate_equilibrium(eq.solEq.w, eq.solEq.p)
+eq.evaluate_equilibrium(eq.solEq.p,eq.solEq.w)

@@ -1,104 +1,108 @@
-import numpy as np
 from types import SimpleNamespace
+import numpy as np
 from scipy import optimize
-import sympy as sm
 
-class FirmProblem:
-    def __init__(self):
-        # Example parameter initialization
-        self.par = SimpleNamespace(
-            r=0.25,        # Elasticity parameter
-            epsilon=0.5,   # Weight on capital
-            w=7.0,         # Wage rate
-            tau_z=17.0,    # Cost of other input
-            p=12.0         # Output price
-        )
-        self.sol = SimpleNamespace(
-            t=np.nan, z=np.nan, y=np.nan,
-            pi=np.nan, foc_error=np.nan
-        )
-
-    def production(self, t, z):
-        """Numerical CES production function."""
-        p = self.par
-        base = np.maximum(1e-10, p.epsilon*abs(t)**p.r + (1-p.epsilon)*abs(z)**p.r)
-        return base ** (1/p.r)
-
-    def foc_error(self, t, z):
-        """Foc error function (assumed defined elsewhere correctly)."""
-        t = max(t, 1e-10)
-        z = max(z, 1e-10)
-        p = self.par
-        # Example: using numerical finite differences or your own derivatives here...
-        # For illustration, assume we have some computed partial derivatives:
-        df_dt = p.epsilon * (t**(p.r-1)) * (self.production(t, z)**(1-p.r))
-        df_dz = (1-p.epsilon) * (z**(p.r-1)) * (self.production(t, z)**(1-p.r))
-        err1 = p.p * df_dt - p.w
-        err2 = p.p * df_dz - p.tau_z
-        return err1**2 + err2**2
-
-    def grad_foc_error(self, x):
-        """Placeholder gradient function. Replace with your analytical gradient."""
-        # For illustration, we use numerical approximation:
-        eps = 1e-6
-        t, z = x
-        f0 = self.foc_error(t, z)
-        d_t = (self.foc_error(t+eps, z) - f0) / eps
-        d_z = (self.foc_error(t, z+eps) - f0) / eps
-        return np.array([d_t, d_z])
+class firmProblem:
     
-    def solve_firm(self):
-        """Robust optimization with symbolic derivatives and two-stage minimization."""
+    def __init__(self):
+        # define parameter vector
+        self.parFirm = SimpleNamespace()
+        # define exogenous parameters
+        self.parFirm.r = 0.5         # elasticity exponent
+        self.parFirm.epsilon = 0.5   # CES weight on t
+        # define solution vector
+        self.sol = SimpleNamespace()
+        
+    def inside(self, t, z):
+        parFirm = self.parFirm
+        inside_val = parFirm.epsilon * (t ** parFirm.r) + (1 - parFirm.epsilon) * (z ** parFirm.r)
+        return inside_val if inside_val > 0 else 0.0
 
+    def foc_errors(self, t, z):
+        parFirm = self.parFirm
+        # Compute production output using the CES function
+        f = self.inside(t, z)**(1/parFirm.r)
         
-        # Define an initial guess for the symbolic minimization:
-        # (Ensure x0 is defined before it is used!)
-        p = self.par
-        x0 = [
-            max(1.0, (p.w / (p.p * p.epsilon)) ** (1/(p.r))),
-            max(1.0, (p.tau_z / (p.p * (1-p.epsilon))) ** (1/(p.r)))
-        ]
+        # avoid division by zero or negative production
+        if self.inside(t, z) <= 0:
+            return np.array([np.nan, np.nan])
         
-        # Second, use an optimization method with the FOC error function:
-        res = optimize.minimize(
-            fun=lambda x: self.foc_error(x[0], x[1]),
-            x0=x0,
-            method='Nelder-Mead',
-            jac=lambda x: self.grad_foc_error(x),
-            bounds=((1e-6, None), (1e-6, None)),
-            options={
-                'ftol': 1e-12,
-                'gtol': 1e-12,
-                'maxfun': 15000,
-                'maxiter': 5000,
-                'maxls': 50
-            }
-        )
+        # derivatives w.r.t. t and z
+        df_dt = parFirm.epsilon * (t ** (parFirm.r - 1)) * (f ** (1 - parFirm.r))
+        df_dz = (1 - parFirm.epsilon) * (z ** (parFirm.r - 1)) * (f ** (1 - parFirm.r))
         
-        # Store results
-        self.sol.t, self.sol.z = res.x
-        self.sol.y = self.production(self.sol.t, self.sol.z)
-        self.sol.pi = p.p * self.sol.y - p.w * self.sol.t - p.tau_z * self.sol.z
-        self.sol.foc_error = res.fun
+        # first-order condition errors
+        err_t = parFirm.p * df_dt - parFirm.w
+        err_z = parFirm.p * df_dz - parFirm.tau_z
         
-        print(f"\nConverged: {res.success} ({res.message})")
-        print(f"t = {self.sol.t:.4f}, z = {self.sol.z:.4f}")
-        print(f"Y = {self.sol.y:.4f}, π = {self.sol.pi:.4f}")
-        print(f"FOC error: {self.sol.foc_error:.2f}")
+        return np.array([err_t, err_z])
+    
+    def solve_firm_bisection_t(self, w, tau_z, p):
+        # set variable parameters
+        self.parFirm.w = w             # cost of t
+        self.parFirm.tau_z = tau_z     # cost of z
+        self.parFirm.p = p             # price of output
+
+        # For each t, solve for z (minimize z's FOC error) then return t's error (df/dt error)
+        def t_error(t):
+            # inner minimization: choose z to minimize squared error on z's first order condition
+            def obj_z(z):
+                foc = self.foc_errors(t, z[0])
+                return foc[1]**2
+            z0 = [0.5]
+            res_z = optimize.minimize(obj_z, z0, bounds=[(1e-6, None)], method='L-BFGS-B',
+                                        options={'ftol':1e-12, 'gtol':1e-12})
+            if not res_z.success:
+                # if z cannot be solved, return a large error
+                return np.inf
+            z_val = res_z.x[0]
+            foc = self.foc_errors(t, z_val)
+            # We now return the t FOC error
+            return foc[0]
         
+        # Find a bracket region for t where t_error changes sign. Adjust these limits as needed.
+        t_min = 1e-6
+        t_max = 1.0
+        # Scan a coarse grid to find a sign change.
+        t_grid = np.linspace(t_min, t_max, 1000)
+        bracket_found = False
+        for i in range(len(t_grid)-1):
+            f1 = t_error(t_grid[i])
+            f2 = t_error(t_grid[i+1])
+            if f1 * f2 < 0:
+                t_lower = t_grid[i]
+                t_upper = t_grid[i+1]
+                bracket_found = True
+                break
+        if not bracket_found:
+            raise RuntimeError("No sign change found in t_error. Try redefining t_grid limits.")
+        
+        sol_t = optimize.root_scalar(t_error, bracket=[t_lower, t_upper], method='bisect', xtol=1e-12)
+        t_sol = sol_t.root
+
+        # Now, for the found t_sol, obtain the corresponding z:
+        def obj_z(z):
+            foc = self.foc_errors(t_sol, z[0])
+            return foc[1]**2
+        z0 = [0.5]
+        res_z = optimize.minimize(obj_z, z0, bounds=[(1e-6, None)], method="L-BFGS-B",
+                                  options={'ftol':1e-12, 'gtol':1e-12})
+        if not res_z.success:
+            raise RuntimeError("Failed to minimize z's FOC for t = %.8f" % t_sol)
+        z_sol = res_z.x[0]
+        
+        # Save the solution
+        self.sol.t = t_sol
+        self.sol.z = z_sol
+        self.sol.y = self.inside(t_sol, z_sol)**(1/self.parFirm.r)
+        
+        optimal_profit = self.parFirm.p * self.sol.y - self.parFirm.w * self.sol.t - self.parFirm.tau_z * self.sol.z
+        print(f"Solution: t = {t_sol:.8f}, z = {z_sol:.8f}")
+        print(f"Optimal profit: {optimal_profit:.8e}")
         return self.sol
 
-# ========== TEST THE CODE ==========
-if __name__ == "__main__":
-    model = FirmProblem()
-    print("\nTest 1: Default parameters")
-    model.solve_firm()
-
-    print("\nTest 2: Higher wage (w=12)")
-    model.par.w = 12
-    model.solve_firm()
-
-    print("\nTest 3: Higher elasticity (r=0.9)")
-    model = FirmProblem()
-    model.par.r = 0.9
-    model.solve_firm()
+# Test the bisection-based approach for t
+model = firmProblem()
+model.solve_firm_bisection_t(w=5, tau_z=2, p=10)
+errors = model.foc_errors(model.sol.t, model.sol.z)
+print(f"FOC errors: df/dt error = {errors[0]:.8e}, df/dz error = {errors[1]:.8e}")

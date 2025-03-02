@@ -84,5 +84,5 @@ class workerProblem():
 
 # test
 model = workerProblem()
-model.worker(phi=0.5, tau=0.2, w=1, pb=1, pc=1, l=0)
+model.worker(phi=1, tau=0, w=1, pb=1, pc=1, l=0)
 

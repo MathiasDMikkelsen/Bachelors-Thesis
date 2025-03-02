@@ -25,10 +25,10 @@ class firmProblem:
     # calculate foc errors
     def foc_errors(self, t, z):
         parFirm = self.parFirm
-        f = self.inside(t, z)
+        f = self.inside(t, z)**(1/parFirm.r)
         
         # avoid division by zero or negative production
-        if f <= 0:
+        if self.inside(t, z) <= 0:
             return np.array([np.nan, np.nan])
         
         # define focs
@@ -48,8 +48,8 @@ class firmProblem:
         self.parFirm.tau_z = tau_z     # cost of z
         self.parFirm.p = p             # price of output
         
-        # define grid for t (max 5 full units for five households)
-        t_grid = np.linspace(1e-6, 5.0, 1000) # aviod zero division (t always larger than zero)
+        # define grid for t (max 1.0 full units for five households)
+        t_grid = np.linspace(1e-6, 1.0, 10000) # aviod zero division (t always larger than zero)
         
         # initialize best guess
         best_total_error = np.inf
@@ -62,7 +62,7 @@ class firmProblem:
             # define objective as squared error on z's foc
             def obj_z(z):
                 foc = self.foc_errors(t_val, z[0])
-                return foc[1]**2 
+                return foc[0]**2
 
             # starting guess
             z0 = [0.5]
@@ -72,10 +72,10 @@ class firmProblem:
                           options={'ftol':1e-12, 'gtol':1e-12})
             
             # continue if convergence fails
-            if not res_z.success:
-                continue
+            # if not res_z.success:
+            #    continue
             
-            # update z value to optization problem output
+            # update z value to optimization problem output
             z_val = res_z.x[0]
 
             # compute sum of squared focs
@@ -89,8 +89,8 @@ class firmProblem:
                 best_z = z_val
 
             #  break early if total squared error is small
-            if best_total_error < 1e-10:
-                break
+            # if best_total_error < 1e-50:
+            #   break
         
         # print solution
         print(f"solution: t = {best_t:.8f}, z = {best_z:.8f}, total squared foc error = {best_total_error:.8e}")
@@ -99,10 +99,16 @@ class firmProblem:
         self.sol.t = best_t
         self.sol.z = best_z
         self.sol.y = self.inside(best_t, best_z)**(1/(self.parFirm.r))
+        
+        # calculate and print profit
+        optimal_profit = self.parFirm.p * self.sol.y - self.parFirm.w * self.sol.t - self.parFirm.tau_z * self.sol.z
+        print(f"optimal profit: {optimal_profit:.8e}")
+        
+        
         return self.sol
 
 # test
 model = firmProblem()
-model.solve_firm(w=5, tau_z=10, p=10)
+model.solve_firm(w=5, tau_z=2, p=10)
 errors = model.foc_errors(model.sol.t, model.sol.z)
 print(f"foc errors: df/dt error = {errors[0]:.8e}, df/dz error = {errors[1]:.8e}")
