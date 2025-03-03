@@ -2,10 +2,6 @@ import numpy as np
 import numba as nb
 from scipy.optimize import fsolve  # You can still use broyden1 if you wish.
 
-#######################
-# Household functions #
-#######################
-
 @nb.njit
 def hh_utility(c, d, ell, alpha, beta, gamma, d0):
     """
@@ -16,19 +12,8 @@ def hh_utility(c, d, ell, alpha, beta, gamma, d0):
 
 @nb.njit
 def hh_focs(c, d, ell, p, w, alpha, beta, gamma, d0, tau_w, mult):
-    """
-    Returns 3 household FOCs:
-
-      dU/dc   = alpha / c
-      dU/dd   = beta / (d - d0)
-      dU/dell = gamma / ell
-
-    1) alpha / c - mult * p = 0
-    2) beta / (d - d0) - mult * p = 0
-    3) gamma / ell - mult * (1 - tau_w) * w = 0
-    """
-    # Check feasibility: c>0, d>d0, ell>0
-    # If any invalid, return large residuals to penalize.
+    
+    # feasibility implies c>0, d>d0, ell>0. if invalid return large residuals
     if c <= 0.0 or (d <= d0) or ell <= 0.0:
         return np.array([1e6, 1e6, 1e6])
 
@@ -36,10 +21,6 @@ def hh_focs(c, d, ell, p, w, alpha, beta, gamma, d0, tau_w, mult):
     foc_d   = (beta / (d - d0)) - mult * p
     foc_ell = (gamma / ell) - mult * (1.0 - tau_w) * w
     return np.array([foc_c, foc_d, foc_ell])
-
-##################
-# Firm functions #
-##################
 
 @nb.njit
 def firm_production(t, z, epsilon, r):
@@ -72,10 +53,6 @@ def firm_focs(t, z, p, w, tau_z, epsilon, r):
     foc_z = p * dy_dz - tau_z
     return np.array([foc_t, foc_z])
 
-#########################################
-# Market clearing & budget constraints #
-#########################################
-
 @nb.njit
 def market_clearing(c, d, ell, t, z, p, w, epsilon, r):
     """
@@ -85,7 +62,7 @@ def market_clearing(c, d, ell, t, z, p, w, epsilon, r):
     """
     y = firm_production(t, z, epsilon, r)
     f_goods = (c + d) - y
-    f_labor = (1.0 - ell) - t
+    f_labor = (5.0 - ell) - t
     return np.array([f_goods, f_labor])
 
 @nb.njit
@@ -93,7 +70,7 @@ def budget_constraint(c, d, ell, w):
     """
     Single condition: c + d - w*(1 - ell) = 0
     """
-    return c + d - w * (1.0 - ell)
+    return c + d - w * (5.0 - ell)
 
 #########################
 # The full system (8 eq) #
@@ -148,24 +125,24 @@ def test_full_system():
 
     We'll show fsolve here for more typical usage.
     """
-    # Initial guess for x = [c, d, ell, t, z, p, w, mult]
+    # initial guess for x = [c, d, ell, t, z, p, w, mult]
     x0 = np.array([10.0,   # c
                    5.0,    # d
-                   0.8,    # ell
+                   0.5,    # ell
                    0.2,    # t
                    10.0,   # z
                    2.0,    # p
                    3.0,    # w
                    1.0])   # mult
     
-    # Parameter dictionary
+    # parameter dictionary
     params = {
-        'alpha':   0.7,
-        'beta':    0.4,
-        'gamma':   0.3,
+        'alpha':   0.7,     # preference for clean good
+        'beta':    0.4,     # preference for polluting good
+        'gamma':   0.3,     # preference for leisure
         'd0':      1.0,     # subsistence for d
-        'tau_w':   0.2,
-        'tau_z':   5,     # cost param on z
+        'tau_w':   0.6,     # income tax
+        'tau_z':   3,       # cost for z
         'epsilon': 0.5,     # CES parameter
         'r':       0.5
     }
@@ -177,8 +154,8 @@ def test_full_system():
     # Solve
     sol = fsolve(F_for_solver, x0, xtol=1e-8, maxfev=5000)
     
-    print("Solution x = [c, d, ell, t, z, p, w, mult]:", sol)
-    print("Residuals at solution:", F_for_solver(sol))
+    print("solution x = [c, d, ell, t, z, p, w, mult]:", sol)
+    print("residuals at solution are", F_for_solver(sol))
 
 if __name__ == "__main__":
     test_full_system()
