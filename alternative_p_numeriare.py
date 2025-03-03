@@ -4,7 +4,7 @@ from scipy.optimize import differential_evolution
 np.set_printoptions(formatter={'float_kind': lambda x: format(x, '.8f')})
 
 ###############################################################################
-# 1) MODEL FUNCTIONS (Power Utility, CES Production, Market Clearing, Budget)
+# 1) MODEL FUNCTIONS (Power Utility, CES Production, Market Clearing)
 ###############################################################################
 
 @nb.njit
@@ -64,33 +64,21 @@ def market_clearing(c, d, ell, t, z, p, w, epsilon, r):
     f_labor = (1.0 - ell) - t
     return np.array([f_goods, f_labor])
 
-@nb.njit
-def budget_constraint(c, d, ell, w, z, p):
-    """
-    Budget:
-      (c + d) * p - w*(1 - ell) = 0.
-    Returns a large penalty if c+d <= 0.
-    """
-    if (c + d) <= 0.0:
-        return 1e6
-    lhs = (c + d) * p
-    rhs = w * (1.0 - ell)
-    return lhs - rhs
-
 ###############################################################################
 # 2) FULL SYSTEM OF EQUATIONS
 ###############################################################################
 def full_system(x, params):
     """
-    x = [c, d, ell, t, z, p, w, mult]
+    x = [c, d, ell, t, z, w, mult]
     The system consists of:
       3 household FOCs,
       2 firm FOCs,
-      2 market clearing eqs,
-      1 budget eq.
-    Returns an 8-dimensional residual vector.
+      2 market clearing equations.
+    p is now taken from params (i.e. the chosen numeriare).
+    Returns a 7-dimensional residual vector.
     """
-    c, d, ell, t, z, p, w, mult = x
+    c, d, ell, t, z, w, mult = x
+    p = params['p']  # numeriare is now user-specified
 
     alpha   = params['alpha']
     beta    = params['beta']
@@ -100,10 +88,10 @@ def full_system(x, params):
     epsilon = params['epsilon']
     r       = params['r']
 
-    hh_res   = hh_focs(c, d, ell, p, w, alpha, beta, gamma, d0, mult)  # 3 eq
-    firm_res = firm_focs(t, z, p, w, tau_z, epsilon, r)                 # 2 eq
-    mkt_res  = market_clearing(c, d, ell, t, z, p, w, epsilon, r)         # 2 eq
-    #budg_res = np.array([budget_constraint(c, d, ell, w, z, p)])           # 1 eq
+    hh_res   = hh_focs(c, d, ell, p, w, alpha, beta, gamma, d0, mult)  # 3 eq.
+    firm_res = firm_focs(t, z, p, w, tau_z, epsilon, r)                 # 2 eq.
+    mkt_res  = market_clearing(c, d, ell, t, z, p, w, epsilon, r)         # 2 eq.
+    # Budget constraint removed
 
     return np.concatenate((hh_res, firm_res, mkt_res))
 
@@ -115,34 +103,34 @@ def objective(x, params):
     return np.sum(res**2)
 
 ###############################################################################
-# 4) MAIN: Global Minimization via Differential Evolution
+# 4) MAIN: Global Minimization via Differential Evolution and Equilibrium Profit
 ###############################################################################
 def main():
-    from scipy.optimize import differential_evolution
+    # You can choose the numeriare value here.
+    numeriare_value = 3.0  # change this value as desired
 
-    # Parameter dictionary with tau_z = 50 (a high tax on z)
+    # Parameter dictionary
     params = {
         'alpha':   0.7,
         'beta':    0.2,
         'gamma':   0.2,
         'd0':      0.5,
-        'tau_z':   1,  # high tax parameter on z
-        'epsilon': 0.9,
-        'r':       0.5
+        'tau_z':   1,    # tax parameter on z
+        'epsilon': 0.6,
+        'r':       0.5,
+        'p':       numeriare_value  # numeriare value chosen by the user
     }
 
-    # We'll solve for x = [c, d, ell, t, z, p, w, mult].
-    # For an interior solution, we require c > 0, d > 0.5, ell in (0,1), t = 1-ell, p>0, w>0, mult>0.
+    # We'll solve for x = [c, d, ell, t, z, w, mult].
     # Set bounds that are generous but keep variables in reasonable ranges.
     bounds = [
-        (1e-6, 100.0),  # c
-        (0.1, 100.0),  # d (d must be > d0=0.5)
-        (1e-6, 0.9999), # ell in (0,1)
-        (1e-6, 1.0),    # t in (0,1) because t should equal 1-ell
-        (1e-6, 100.0),  # z
-        (1e-6, 10.0),   # p
-        (1e-6, 100.0),  # w
-        (1e-6, 20.0)    # mult
+        (1e-6, 100.0),   # c
+        (0.1, 100.0),    # d (d must be > d0=0.5)
+        (1e-6, 0.9999),  # ell in (0,1)
+        (1e-6, 1.0),     # t in (0,1) because t should equal 1-ell
+        (1e-6, 100.0),   # z
+        (1e-6, 100.0),   # w
+        (1e-6, 20.0)     # mult
     ]
 
     # Define the objective function for differential evolution
@@ -166,9 +154,22 @@ def main():
     print("Message: ", result.message)
     print("Minimum sum-of-squared errors:", result.fun)
     x_sol = result.x
-    print("Solution x = [c, d, ell, t, z, p, w, mult]:\n", x_sol)
+    print("Solution x = [c, d, ell, t, z, w, mult]:\n", x_sol)
     res_final = full_system(x_sol, params)
     print("Final residuals:\n", res_final)
+
+    # Compute equilibrium output and profit from the firm
+    c, d, ell, t, z, w, mult = x_sol
+    p = params['p']
+    epsilon = params['epsilon']
+    r = params['r']
+    tau_z = params['tau_z']
+
+    y = firm_production(t, z, epsilon, r)
+    # Equilibrium profit: Revenue minus cost of labor and z
+    profit = p * y - w * t - tau_z * z
+    print("Equilibrium output (y): {:.8f}".format(y))
+    print("Equilibrium profit: {:.8f}".format(profit))
 
 if __name__=="__main__":
     main()
