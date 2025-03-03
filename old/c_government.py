@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from scipy.optimize import minimize
 import numpy as np
-from a_hh import workerProblem
+from old.a_hh import workerProblem
 
 class govSWF():
     def __init__(self):
