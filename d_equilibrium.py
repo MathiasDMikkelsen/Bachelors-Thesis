@@ -1,98 +1,98 @@
-from types import SimpleNamespace
-from scipy.optimize import minimize_scalar
-from a_hh import workerProblem
 import numpy as np
+from types import SimpleNamespace
+from a_hh import workerProblem
 from alt_b_firm_old import firmProblem
-from scipy import optimize
 
-class equilibirium():
-    
+class EquilibriumGridSearch:
     def __init__(self):
-        self.parEq = SimpleNamespace()
-        self.solEq = SimpleNamespace()
+        self.sol = SimpleNamespace()
     
-    def evaluate_equilibrium(self, p, w):
-        parEq = self.parEq
-        
-        # Define an objective function for z.
-        # It returns the squared difference between the guessed z and the firm's implied z.
-        def obj_z(z):
-            try:
-                # Solve the household problem using z (here, for example, letting labor decision depend on z)
-                hh = workerProblem()
-                hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=0.25 * z)
-                c = hhSol.c
-                b = hhSol.b
-                
-                # Solve the firm problem with target output y = c + b.
-                firm = firmProblem()
-                firmSol = firm.solve_firm(w=8, tau_z=0.25, y=c+b)
-                if firmSol is None:
-                    # Return a high penalty if firm did not converge.
-                    return 1e6
-                # We want the firm's computed z to match our guess.
-                return (firmSol.z - z)**2
-            except Exception as e:
-                # In case of any error, return a high penalty.
-                return 1e6
-        
-        # First, do a coarse grid search over z to get a robust initial guess.
-        z_grid = np.linspace(1e-3, 100, 1000)
-        grid_vals = np.array([obj_z(z) for z in z_grid])
-        best_index = np.argmin(grid_vals)
-        z_initial = z_grid[best_index]
-        
-        # Now refine with a bounded minimizer.
-        res = optimize.minimize_scalar(obj_z, bounds=(max(1e-3, 0.5*z_initial), 1.5*z_initial),
-                                       method='bounded', options={'xatol': 1e-12})
-        if not res.success:
-            print("z-optimization did not converge:", res.message)
-            z_star = z_initial  # fallback to grid solution
-        else:
-            z_star = res.x
-        
-        # With the converged z, re-solve the household and firm problems.
+    def equilibrium_residuals(self, w, z):
+        """
+        For a given wage w and linking variable z:
+
+        1) Solve the household problem with labor = 0.25*z.
+           - Let c = consumption, b = saving, ell = leisure.
+        2) Household's 'target output' is y_target = c + b.
+        3) Solve the firm problem with target y = y_target (and the same wage w!).
+           - Let firmSol.t = labor demand, firmSol.z = linking var, firmSol.y = production.
+
+        We define three equilibrium residuals:
+          F1 = firmSol.z - z                         (linking consistency)
+          F2 = (c + b) - firmSol.y                   (goods market clearing)
+          F3 = firmSol.t - (1 - hhSol.ell)           (labor market clearing)
+
+        Returns (F1, F2, F3).
+        """
+        # Solve the household problem.
         hh = workerProblem()
-        hhSol = hh.worker(phi=1, tau=0, w=w, pb=p, pc=p, l=5 * z_star)
+        hhSol = hh.worker(phi=1, tau=0, w=w, pb=1.0, pc=1.0, l=0.25 * z)
+        
         c = hhSol.c
         b = hhSol.b
+        ell = hhSol.ell
         
+        y_target = c + b  # household's total usage (consumption + saving)
+        
+        # Solve the firm problem with the same wage w (NOT a fixed w=8).
         firm = firmProblem()
-        firmSol = firm.solve_firm(w=8, tau_z=5, y=c+b)
+        firmSol = firm.solve_firm(w=w, tau_z=0.25, y=y_target)
         
-        # Compute excess demands for diagnostics.
-        g_m = (c + b) - firmSol.y       # goods market excess demand
-        l_m = firmSol.t - (1 - hhSol.ell) # labor market excess demand
-        parEq.g_m = g_m
-        parEq.l_m = l_m
+        # If firmSol fails or is None, return large residuals so it's penalized.
+        if firmSol is None or not hasattr(firmSol, 'z') or not hasattr(firmSol, 'y') or not hasattr(firmSol, 't'):
+            return 1e6, 1e6, 1e6
         
-        print(f'excess goods market demand: {g_m:.2f}, excess labor market demand: {l_m:.2f}')
-        return parEq
+        # Define the three residuals:
+        F1 = firmSol.z - z                 # linking consistency
+        F2 = (c + b) - firmSol.y           # goods market clearing
+        F3 = firmSol.t - (1.0 - ell)       # labor market clearing
+
+        return F1, F2, F3
     
     def find_equilibrium(self):
-        # Fix p as numeraire.
-        p = 1.0
+        """
+        Brute-force 2D grid search:
+          - We iterate over wage (w) in w_grid, linking variable (z) in z_grid.
+          - At each grid point, compute (F1, F2, F3) from equilibrium_residuals(...).
+          - Objective = F1^2 + F2^2 + F3^2.
+          - Choose the (w,z) that minimize this objective.
         
-        # Define a univariate objective function on wage.
-        def objective(w):
-            par = self.evaluate_equilibrium(p, w)
-            return par.g_m**2 + par.l_m**2
+        Because we have 3 conditions but only 2 unknowns, we typically can't get all
+        residuals to zero. We'll pick the best approximation on the grid.
+        """
+        # Define grids (adjust ranges/resolutions as needed).
+        w_grid = np.linspace(0.5, 20.0, 25)    # 25 points for wage
+        z_grid = np.linspace(1e-3, 50.0, 25)   # 25 points for linking var
         
-        # Choose wage search bounds.
-        wage_lower = 0.1
-        wage_upper = 50.0
+        best_val = np.inf
+        best_w = None
+        best_z = None
+        best_F = (None, None, None)
         
-        res = optimize.minimize_scalar(objective, bounds=(wage_lower, wage_upper),
-                                       method='bounded', options={'xatol': 1e-12})
-        self.solEq.w = res.x
-        self.solEq.p = p
-        print(f'equilibrium found: p = {self.solEq.p:.4f}, w = {self.solEq.w:.4f}')
-        return self.solEq
+        # Loop over the (w, z) grid.
+        for w in w_grid:
+            for z in z_grid:
+                F1, F2, F3 = self.equilibrium_residuals(w, z)
+                val = F1**2 + F2**2 + F3**2
+                if val < best_val:
+                    best_val = val
+                    best_w = w
+                    best_z = z
+                    best_F = (F1, F2, F3)
+        
+        self.sol.w = best_w
+        self.sol.z = best_z
+        self.sol.obj_value = best_val
+        self.sol.F1, self.sol.F2, self.sol.F3 = best_F
+        
+        print("===== 2D Grid Search Equilibrium =====")
+        print(f"Best wage (w): {best_w:.4f}")
+        print(f"Best linking variable (z): {best_z:.4f}")
+        print(f"Residuals: F1 = {best_F[0]:.4e}, F2 = {best_F[1]:.4e}, F3 = {best_F[2]:.4e}")
+        print(f"Objective (F1^2 + F2^2 + F3^2) = {best_val:.4e}")
+        
+        return self.sol
 
-# Example usage:
-eq = equilibirium()
-eq.find_equilibrium()
-
-# Check hh problem separately.
-model = workerProblem()
-model.worker(phi=1, tau=0, w=16.2562, pb=1, pc=1, l=0)
+if __name__ == "__main__":
+    eq_solver = EquilibriumGridSearch()
+    solution = eq_solver.find_equilibrium()
