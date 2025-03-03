@@ -62,7 +62,7 @@ def market_clearing(c, d, ell, t, z, p, w, epsilon, r):
     """
     y = firm_production(t, z, epsilon, r)
     f_goods = (c + d) - y
-    f_labor = (5.0 - ell) - t
+    f_labor = (20.0 - ell) - t
     return np.array([f_goods, f_labor])
 
 @nb.njit
@@ -70,7 +70,7 @@ def budget_constraint(c, d, ell, w):
     """
     Single condition: c + d - w*(1 - ell) = 0
     """
-    return c + d - w * (5.0 - ell)
+    return c + d - w * (20.0 - ell)
 
 #########################
 # The full system (8 eq) #
@@ -141,8 +141,8 @@ def test_full_system():
         'beta':    0.4,     # preference for polluting good
         'gamma':   0.3,     # preference for leisure
         'd0':      1.0,     # subsistence for d
-        'tau_w':   0.6,     # income tax
-        'tau_z':   3,       # cost for z
+        'tau_w':   0.5,     # income tax
+        'tau_z':   3.1,       # cost for z
         'epsilon': 0.5,     # CES parameter
         'r':       0.5
     }
