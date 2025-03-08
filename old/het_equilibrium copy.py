@@ -8,26 +8,26 @@ np.set_printoptions(formatter={'float_kind': lambda x: format(x, '.8f')})
 ##############################################################################################################################################################
 
 @nb.njit
-def hh1_focs(c1, d1, ell1, p_c, w, alpha, beta, gamma, d0, mult1, psi1):
+def hh1_focs(c1, d1, ell1, p_c, p_d, w, alpha, beta, gamma, d0, mult1, psi1):
     """
     Household 1 FOCs.
     """
     if c1 <= 0.0 or d1 <= d0 or ell1 <= 0.0 or ell1 >= 1.0:
         return np.array([1e6, 1e6, 1e6])
     foc_c1 = alpha * (c1**(alpha-1)) - mult1 * p_c
-    foc_d1 = beta * ((d1-d0)**(beta-1)) - mult1 * p_c
+    foc_d1 = beta * ((d1-d0)**(beta-1)) - mult1 * p_d
     foc_ell1 = gamma * (ell1**(gamma-1)) - mult1 * w * psi1
     return np.array([foc_c1, foc_d1, foc_ell1])
 
 @nb.njit
-def hh2_focs(c2, d2, ell2, p_c, w, alpha, beta, gamma, d0, mult2, psi2):
+def hh2_focs(c2, d2, ell2, p_c, p_d, w, alpha, beta, gamma, d0, mult2, psi2):
     """
     Household 2 FOCs.
     """
     if c2 <= 0.0 or d2 <= d0 or ell2 <= 0.0 or ell2 >= 1.0:
         return np.array([1e6, 1e6, 1e6])
     foc_c2 = alpha * (c2**(alpha-1)) - mult2 * p_c
-    foc_d2 = beta * ((d2-d0)**(beta-1)) - mult2 * p_c
+    foc_d2 = beta * ((d2-d0)**(beta-1)) - mult2 * p_d
     foc_ell2 = gamma * (ell2**(gamma-1)) - mult2 * w * psi2
     return np.array([foc_c2, foc_d2, foc_ell2])
 
