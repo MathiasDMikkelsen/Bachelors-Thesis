@@ -81,7 +81,7 @@ def find_feasible_tau_z():
     }
     
     u0 = np.array([np.log(1.0), np.log(0.6), 0.0, 1.0, 1.0, 1.0])
-    tau_z_values = np.linspace(0.1, 10.0, 100)
+    tau_z_values = np.linspace(0.0, 30.0, 100)
 
     feasible_solutions = []
 
