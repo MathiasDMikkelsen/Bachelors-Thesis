@@ -24,9 +24,9 @@ def households_focs_array(c, d, ell, p_c, p_d, w,
         if (c[i] <= 0.0) or (d[i] <= d0) or (ell[i] <= 0.0) or (ell[i] >= 1.0):
             res[3*i : 3*i+3] = np.array([1e6, 1e6, 1e6])                 # Penalty if out of bounds
         else:
-            foc_c   = alpha * (c[i]**(alpha - 1.0)) - mult[i] * p_c      # FOC for clean good
-            foc_d   = beta  * ((d[i] - d0)**(beta - 1.0)) - mult[i] * p_d
-            foc_ell = gamma * (ell[i]**(gamma - 1.0)) - mult[i] * w * psi[i]
+            foc_c   = alpha * (1/c[i]) - mult[i] * p_c      # FOC for clean good
+            foc_d   = beta  * (1/(d[i] - d0)) - mult[i] * p_d
+            foc_ell = gamma * (1/ell[i]) - mult[i] * w * psi[i]
             res[3*i : 3*i+3] = np.array([foc_c, foc_d, foc_ell])
     return res
 
@@ -178,7 +178,7 @@ def full_system(u, params, n=5):                                           # Def
 ##############################################################################################################################################################
 # 6) Main Solve Function
 ##############################################################################################################################################################
-def main_solve_for_tau(tau_z=0.5, n=5):                                     # Defines the main function to solve the system
+def main_solve_for_tau(tau_z, n):                                     # Defines the main function to solve the system
     """
     Solve the full system for a given tau_z with n households.
     """
@@ -276,4 +276,4 @@ def main_solve_for_tau(tau_z=0.5, n=5):                                     # De
     print(f"Unused budget constraint (household 1): {excluded_bc:.8f}")         # Print it
 
 if __name__ == "__main__":                                               # Checks if the script is run directly
-    main_solve_for_tau(tau_z=0.5, n=5)                                     # Calls the main function with default arguments
+    main_solve_for_tau(tau_z=0.4, n=5)                                     # Calls the main function with default arguments
