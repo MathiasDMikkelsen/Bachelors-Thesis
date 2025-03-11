@@ -8,8 +8,8 @@ np.set_printoptions(formatter={'float_kind': lambda x: format(x, '.8f')})  # Set
 # 1) Household Functions (vectorized over n households)
 ##############################################################################################################################################################
 @nb.njit
-def households_focs_array(c, d, ell, p_c, p_d, w,
-                           alpha, beta, gamma, d0, mult, psi):
+def households_focs_array(c, d, ell, p_c, p_d, w,                           # Defines a Numba-jitted function for the household FOCs
+                           alpha, beta, gamma, d0, mult, psi, tau_w):
     """
     For each household i (i=0,...,n-1):
       FOC for c:  alpha * c_i^(alpha-1)   - mult_i * p_c = 0
@@ -18,29 +18,29 @@ def households_focs_array(c, d, ell, p_c, p_d, w,
     If any variable is out of bounds, we return a high penalty.
     Returns a 3*n vector.
     """
-    n = c.shape[0]                                                      # Number of households
-    res = np.empty(3 * n)                                               # Pre-allocates array for residuals
-    for i in range(n):                                                  # Loops over each household
+    n = c.shape[0]                                                         # Number of households
+    res = np.empty(3 * n)                                                  # Pre-allocates an array for residuals of size 3*n
+    for i in range(n):                                                     # Loops over each household
         if (c[i] <= 0.0) or (d[i] <= d0) or (ell[i] <= 0.0) or (ell[i] >= 1.0):
-            res[3*i : 3*i+3] = np.array([1e6, 1e6, 1e6])                 # Penalty if out of bounds
+            res[3*i : 3*i+3] = np.array([1e6, 1e6, 1e6])                    # Assigns high penalty if out of bounds
         else:
-            foc_c   = alpha * (c[i]**(alpha - 1.0)) - mult[i] * p_c      # FOC for clean good
-            foc_d   = beta  * ((d[i] - d0)**(beta - 1.0)) - mult[i] * p_d
-            foc_ell = gamma * (ell[i]**(gamma - 1.0)) - mult[i] * w * psi[i]
-            res[3*i : 3*i+3] = np.array([foc_c, foc_d, foc_ell])
-    return res
+            foc_c   = alpha * (c[i]**(alpha - 1.0)) - mult[i] * p_c        # FOC for clean good
+            foc_d   = beta  * ((d[i] - d0)**(beta - 1.0)) - mult[i] * p_d  # FOC for polluting good
+            foc_ell = gamma * (ell[i]**(gamma - 1.0)) - mult[i] * w * psi[i] * (1-tau_w) # FOC for leisure
+            res[3*i : 3*i+3] = np.array([foc_c, foc_d, foc_ell])           # Stores the three FOCs in the result array
+    return res                                                             # Returns the array of household FOC residuals
 
 @nb.njit
-def households_budget_array(c, d, ell, p_c, p_d, w, psi):
+def households_budget_array(c, d, ell, p_c, p_d, w, psi, tau_w):                       # Numba-jitted function for household budget constraints
     """
     For each household, the budget constraint is:
-      p_c * c_i + p_d * d_i = w * (1 - ell_i) * psi_i
+      p_c * c_i + p_d * d_i = w * (1 - ell_i) * (1 - tau_w)
     Returns a vector of length n.
     """
-    n = c.shape[0]
-    res = np.empty(n)
+    n = c.shape[0]                                                         # Number of households
+    res = np.empty(n)                                                      # Pre-allocates an array for budget constraints
     for i in range(n):                                                     # Loops over each household
-        res[i] = p_c * c[i] + p_d * d[i] - w * (1.0 - ell[i]) * psi[i]      # p_c c_i + p_d d_i - w * (1 - ell_i)
+        res[i] = p_c * c[i] + p_d * d[i] - w * (1.0 - ell[i]) * psi * (1-tau_w)              # p_c c_i + p_d d_i - w * (1 - ell_i)
     return res                                                             # Returns the array of budget constraints
 
 ##############################################################################################################################################################
@@ -148,7 +148,7 @@ def full_system(u, params, n=5):                                           # Def
     """
     d0 = params['d0']                                                      # Grabs d0 from params
     (c, d, ell, mult, t_c, t_d, z_c, z_d, p_d, w) = transform(u, d0, n)     # Transforms unknowns into model variables
-    p_c = params['p_c']  # Clean good price (numeraire)
+    p_c       = params['p_c']                                              # Clean good price (numeraire)
     alpha     = params['alpha']                                            # Utility parameter alpha
     beta      = params['beta']                                             # Utility parameter beta
     gamma     = params['gamma']                                            # Utility parameter gamma
@@ -169,7 +169,7 @@ def full_system(u, params, n=5):                                           # Def
     mkt = market_clearing(c, d, ell, t_c, z_c, t_d, z_d, p_c, p_d, w, epsilon_c, epsilon_d, r)
     
     # Household budgets (n eq), drop the first to remove redundancy => n-1 eq
-    hh_budg = households_budget_array(c, d, ell, p_c, p_d, w, psi)
+    hh_budg = households_budget_array(c, d, ell, p_c, p_d, w)
     hh_budg = hh_budg[1:]                                                  # We omit the first budget constraint
 
     # Concatenate all equations (15 + 2 + 2 + 3 + 4 = 26)
@@ -178,7 +178,7 @@ def full_system(u, params, n=5):                                           # Def
 ##############################################################################################################################################################
 # 6) Main Solve Function
 ##############################################################################################################################################################
-def main_solve_for_tau(tau_z=0.5, n=5):                                     # Defines the main function to solve the system
+def main_solve_for_tau(tau_z=4, n=5):                                     # Defines the main function to solve the system
     """
     Solve the full system for a given tau_z with n households.
     """
@@ -186,8 +186,8 @@ def main_solve_for_tau(tau_z=0.5, n=5):                                     # De
     params = {
         'alpha':     0.7,                                                 # Utility param alpha
         'beta':      0.2,                                                 # Utility param beta
-        'gamma':     0.01,                                                 # Utility param gamma
-        'd0':        0.01,                                                 # Minimum polluting good consumption
+        'gamma':     0.2,                                                 # Utility param gamma
+        'd0':        0.1,                                                 # Minimum polluting good consumption
         'r':         0.5,                                                 # CES parameter
         'p_c':       1.0,                                                 # Clean good price (numeraire)
         'epsilon_c': 0.8,                                                 # Weight in firm C's production function
@@ -270,10 +270,5 @@ def main_solve_for_tau(tau_z=0.5, n=5):                                     # De
     print(final_res)
     print("=======================================================")
 
-    p_c = params['p_c']
-
-    excluded_bc = households_budget_array(c, d, ell, p_c, p_d, w, psi)[0]
-    print(f"Unused budget constraint (household 1): {excluded_bc:.8f}")         # Print it
-
 if __name__ == "__main__":                                               # Checks if the script is run directly
-    main_solve_for_tau(tau_z=0.5, n=5)                                     # Calls the main function with default arguments
+    main_solve_for_tau(tau_z=4, n=5)                                     # Calls the main function with default arguments
