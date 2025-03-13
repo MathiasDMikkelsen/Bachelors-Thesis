@@ -31,7 +31,7 @@ def households_focs_array(c, d, ell, p_c, p_d, w,
     return res
 
 @nb.njit
-def households_budget_array(c, d, ell, p_c, p_d, w, psi):
+def households_budget_array(c, d, ell, p_c, p_d, w, psi,tau_z, z_d,z_c):
     """
     For each household, the budget constraint is:
       p_c * c_i + p_d * d_i = w * (1 - ell_i) * psi_i
@@ -40,7 +40,7 @@ def households_budget_array(c, d, ell, p_c, p_d, w, psi):
     n = c.shape[0]
     res = np.empty(n)
     for i in range(n):                                                     # Loops over each household
-        res[i] = p_c * c[i] + p_d * d[i] - w * (1.0 - ell[i]) * psi[i]      # p_c c_i + p_d d_i - w * (1 - ell_i)
+        res[i] = p_c * c[i] + p_d * d[i] - (w * (1.0 - ell[i]) * psi[i]+tau_z*(z_d+z_c)*0.2)     # p_c c_i + p_d d_i - w * (1 - ell_i)
     return res                                                             # Returns the array of budget constraints
 
 ##############################################################################################################################################################
@@ -169,7 +169,7 @@ def full_system(u, params, n=5):                                           # Def
     mkt = market_clearing(c, d, ell, t_c, z_c, t_d, z_d, p_c, p_d, w, epsilon_c, epsilon_d, r)
     
     # Household budgets (n eq), drop the first to remove redundancy => n-1 eq
-    hh_budg = households_budget_array(c, d, ell, p_c, p_d, w, psi)
+    hh_budg = households_budget_array(c, d, ell, p_c, p_d, w, psi, tau_z, z_d,z_c)
     hh_budg = hh_budg[1:]                                                  # We omit the first budget constraint
 
     # Concatenate all equations (15 + 2 + 2 + 3 + 4 = 26)
@@ -194,8 +194,8 @@ def main_solve_for_tau(tau_z, n):                                     # Defines 
         'epsilon_d': 0.6,                                                 # Weight in firm D's production function
         'tau_z':     tau_z                                               # Pollution tax parameter
     }
-    # Define a vector of household productivities (psi) that sum to 1
-    psi = np.array([1, 1, 1, 1, 1])
+    # Define a vector of household productivities (psi) that sum to 5
+    psi = np.array([0.50, 1.50, 2.0, 0.50, 0.50])
     params['psi'] = psi                                                   # Store psi in params
 
     # Total unknowns: 26 for 5 households
@@ -212,7 +212,7 @@ def main_solve_for_tau(tau_z, n):                                     # Defines 
     u0[25] = np.log(1.0)                                                  # ln(w)
 
     # Solve
-    sol = root(lambda x: full_system(x, params, n), u0, method='lm', tol=1e-8)  # Calls the solver
+    sol = root(lambda x: full_system(x, params, n), u0, method='lm', tol=1e-15)  # Calls the solver
     final_res = full_system(sol.x, params, n)                              # Final residual array
     resid_norm = np.linalg.norm(final_res)                                 # Norm of residuals
 
@@ -245,13 +245,13 @@ def main_solve_for_tau(tau_z, n):                                     # Defines 
 
     print("\n==================== FIRM C (CLEAN GOOD) ===================")
     print(f"  Labor (t_c):     {t_c:.4f}")
-    print(f"  Pollution (z_c): {z_c:.4f}")
+    print(f"  Pollution (z_c): {z_c:.20f}")
     print(f"  Output (y_c):    {y_c:.4f}")
     print(f"  Profit:          {profit_c:.4f}")
 
     print("\n==================== FIRM D (POLLUTING GOOD) ===================")
     print(f"  Labor (t_d):     {t_d:.4f}")
-    print(f"  Pollution (z_d): {z_d:.4f}")
+    print(f"  Pollution (z_d): {z_d:.20f}")
     print(f"  Output (y_d):    {y_d:.4f}")
     print(f"  Profit:          {profit_d:.4f}")
 
@@ -271,8 +271,8 @@ def main_solve_for_tau(tau_z, n):                                     # Defines 
 
     p_c = params['p_c']
 
-    excluded_bc = households_budget_array(c, d, ell, p_c, p_d, w, psi)[0]
-    print(f"Unused budget constraint (household 1): {excluded_bc:.8f}")         # Print it
+    excluded_bc = households_budget_array(c, d, ell, p_c, p_d, w, psi, tau_z, z_d,z_c)[0]
+    print(f"Unused budget constraint (household 1): {excluded_bc:.20f}")         # Print it
 
 if __name__ == "__main__":                                               # Checks if the script is run directly
-    main_solve_for_tau(tau_z=1, n=5)                                     # Calls the main function with default arguments
+    main_solve_for_tau(tau_z=3, n=5)                                     # Calls the main function with default arguments
