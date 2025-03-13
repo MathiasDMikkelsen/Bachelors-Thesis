@@ -220,9 +220,20 @@ def main_solve(tau_w, tau_z, l, n):                                     # Define
     sol = root(lambda x: full_system(x, params, n)[0], u0, method='lm', tol=1e-15)  # Calls the solver
     final_res, tax_revenue = full_system(sol.x, params, n)                              # Final residual array
     resid_norm = np.linalg.norm(final_res)                                 # Norm of residuals
+    converged = sol.success
 
     # Transform solution
     c, d, ell, mult, t_c, t_d, z_c, z_d, p_d, w = transform(sol.x, params['d0'], n)
+
+    # Calculate utilities
+    utilities = np.empty(n)
+    for i in range(n):
+        utilities[i] = (params['alpha'] * np.log(c[i]) +
+                        params['beta']  * np.log(d[i] - params['d0']) +
+                        params['gamma'] * np.log(ell[i]))
+
+    # Calculate total pollution
+    aggregate_polluting = np.sum(d)
 
     # Compute firm outputs for profit calculation
     y_c = firm_c_production(t_c, z_c, params['epsilon_c'], params['r'])
@@ -278,6 +289,8 @@ def main_solve(tau_w, tau_z, l, n):                                     # Define
 
     excluded_bc = households_budget_array(c, d, ell, p_c, p_d, w, psi, tau_w, l, tax_revenue)[0]
     print(f"Unused budget constraint (household 1): {excluded_bc:.20f}")         # Print it
+
+    return utilities, aggregate_polluting, converged
 
 if __name__ == "__main__":                                               # Checks if the script is run directly
     l_vector = np.array([0.2, 0.2, 0.2, 0.2, 0.2])                       # Vector of lump-sum transfers
