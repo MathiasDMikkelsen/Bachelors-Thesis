@@ -40,7 +40,7 @@ def households_budget_array(c, d, ell, p_c, p_d, w, psi, tau_w, l, tax_revenue):
     n = c.shape[0]
     res = np.empty(n)
     for i in range(n):                                                     # Loops over each household
-        res[i] = p_c * c[i] + p_d * d[i] - (1-tau_w) * w * (1.0 - ell[i]) * psi[i] - l[i] * tax_revenue   # p_c c_i + p_d d_i - w * (1 - ell_i)
+        res[i] = p_c * c[i] + p_d * d[i] - (1-tau_w[i]) * w * (1.0 - ell[i]) * psi[i] - l[i] * tax_revenue   # p_c c_i + p_d d_i - w * (1 - ell_i)
     return res                                                             # Returns the array of budget constraints
 
 ##############################################################################################################################################################
@@ -171,7 +171,7 @@ def full_system(u, params, n=5):                                           # Def
     mkt = market_clearing(c, d, ell, t_c, z_c, t_d, z_d, p_c, p_d, w, epsilon_c, epsilon_d, r)
     
     # Household budgets (n eq), drop the first to remove redundancy => n-1 eq
-    tax_revenue = tau_w * (w * (t_c + t_d)) + tau_z * (z_c + z_d)
+    tax_revenue = np.sum(tau_w * (w * (1 - ell) * psi)) + tau_z * (z_c + z_d) # Tax revenue
     hh_budg = households_budget_array(c, d, ell, p_c, p_d, w, psi, tau_w, l, tax_revenue)
     hh_budg = hh_budg[1:]                                                  # We omit the first budget constraint
 
@@ -196,7 +196,7 @@ def main_solve(tau_w, tau_z, l, n):                                     # Define
         'epsilon_c': 0.8,                                                 # Weight in firm C's production function
         'epsilon_d': 0.6,                                                 # Weight in firm D's production function
         'tau_z':     tau_z,                                               # Pollution tax parameter
-        'tau_w':     tau_w,                                               # Income tax parameter
+        'tau_w':     tau_w,                                               # Income tax vector
         'l':         l,                                                   # Lumpsum transfer
     }
     # Define a vector of household productivities (psi) that sum to 5
@@ -292,6 +292,7 @@ def main_solve(tau_w, tau_z, l, n):                                     # Define
 
     return utilities, aggregate_polluting, converged
 
-if __name__ == "__main__":                                               # Checks if the script is run directly
-    l_vector = np.array([0.2, 0.2, 0.2, 0.2, 0.2])                       # Vector of lump-sum transfers
-    main_solve(tau_w=0.15, tau_z=3, l=l_vector, n=5)                                     # Calls the main function with default arguments
+if __name__ == "__main__":                                               # Runs this code if the script is executed with this as the main file
+    l_vector = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
+    tau_w_vector = np.array([0.10, 0.12, 0.15, 0.18, 0.20])              # Vector of lump-sum transfers
+    main_solve(tau_w=tau_w_vector, tau_z=3, l=l_vector, n=5)             # Calls the main function with default arguments
