@@ -146,7 +146,7 @@ def full_system(u, params, n=5):
     
     # Market clearing:
     y_d = firm_d_production(t_d, z_d, eps_d, r)
-    eq_d_mkt = np.sum(d) - y_d
+    eq_d_mkt = np.sum(d) + 0.5 - y_d
     eq_l_mkt = np.sum(ell) + t_c + t_d - n*t_total
     
     return np.concatenate((hh_eq, fc, fd, [eq_d_mkt, eq_l_mkt]))
@@ -167,14 +167,14 @@ def main_solve_print(tau_w, tau_z, l_vec, n=5):
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.5,
+        'd0':        0.1,
         'p_c':       1.0,  # normalized price of clean good
         'epsilon_c': 0.995,
         'epsilon_d': 0.92,
         'r':         0.5,
         'tau_z':     tau_z,
         'tau_w':     tau_w,    # array of length n
-        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
+        'phi':       np.array([0.1*5, 0.1*5, 0.2*5, 0.3*5, 0.511*5]),
         'l':         l_vec,    # lumpsum offsets per household
         't_total':   1.0,      # total time endowment
     }
@@ -261,7 +261,7 @@ def main_solve_print(tau_w, tau_z, l_vec, n=5):
     print("=======================================================")
     
     # Return utilities, aggregate_polluting, and convergence flag
-    return utilities, aggregate_polluting, sol.success
+    return utilities, aggregate_polluting, sol.success, c, d, ell
 
 ###############################################################################
 # Run the Equilibrium Solver and Print Results
