@@ -4,9 +4,7 @@ from scipy.optimize import root
 
 np.set_printoptions(formatter={'float_kind': lambda x: format(x, '.8f')})
 
-###############################################################################
-# 1) Firm Production and FOCs (unchanged)
-###############################################################################
+# 1. blocks
 @nb.njit
 def firm_c_production(t_c, z_c, epsilon_c, r):
     inside = epsilon_c*(t_c**r) + (1.0 - epsilon_c)*(z_c**r)
@@ -167,16 +165,16 @@ def main_solve_print(tau_w, tau_z, l_vec, n=5):
     # Set parameters
     params = {
         'alpha':     0.7,
-        'beta':      0.1,
-        'gamma':     0.1,
-        'd0':        0.01,
+        'beta':      0.2,
+        'gamma':     0.2,
+        'd0':        0.5,
         'p_c':       1.0,  # normalized price of clean good
-        'epsilon_c': 0.8,
-        'epsilon_d': 0.6,
+        'epsilon_c': 0.995,
+        'epsilon_d': 0.92,
         'r':         0.5,
         'tau_z':     tau_z,
         'tau_w':     tau_w,    # array of length n
-        'phi':       np.array([0.7, 0.8, 0.9, 1.2, 1.4]),
+        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
         'l':         l_vec,    # lumpsum offsets per household
         't_total':   1.0,      # total time endowment
     }
@@ -218,7 +216,7 @@ def main_solve_print(tau_w, tau_z, l_vec, n=5):
         utilities[i] = params['alpha']*np.log(c[i]) + params['beta']*np.log(d[i]-params['d0']) + params['gamma']*np.log(ell[i])
     
     # Aggregate pollution:
-    aggregate_polluting = np.sum(d)
+    aggregate_polluting = z_d + z_c
     
     # Compute firm outputs and profits
     y_c = firm_c_production(t_c, z_c, params['epsilon_c'], params['r'])
@@ -272,7 +270,7 @@ if __name__=="__main__":
     n = 5
     tau_w_arr = np.array([0.10, 0.12, 0.15, 0.18, 0.20])
     l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-    tau_z = 4.0
+    tau_z = 2.0
     utilities, aggregate_polluting, first_converged = main_solve_print(tau_w_arr, tau_z, l_arr, n=n)
     
     print("\nReturned Values:")
