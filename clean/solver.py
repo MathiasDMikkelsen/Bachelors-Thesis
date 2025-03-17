@@ -181,7 +181,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
     print("final residuals:")
     print(final_res)
     
-    return utilities, aggregate_polluting, sol.success, c, d, ell, w, p_d
+    return utilities, aggregate_polluting, sol.success, c, d, ell, w, p_d, tax_rev
 # end solve system
 
 # 4. test
@@ -190,7 +190,7 @@ tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
 l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
 G = 1.0
 tau_z = 3.0
-utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d = solve(tau_w_arr, tau_z, l_arr, G, n=n)
+utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, tax_rev = solve(tau_w_arr, tau_z, l_arr, G, n=n)
     
 print("returned Values:")
 print("utilities:", utilities)
@@ -199,4 +199,5 @@ print("convergence:", first_converged)
 print("consumption:", c)
 print("dirty good consumption:", d)
 print("labor supply:", ell)
+print("tax revenue:", tax_rev)
 # end test
