@@ -6,10 +6,10 @@ import solver
 np.set_printoptions(suppress=True, precision=8)
 
 # 1. Parameters
-xi = 10.0
+xi = 7.0
 theta = 1.0
 n = 5
-G = 1.0
+G = 2.0
 phi = np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5])
 
 # 2. Objective Function (Social Welfare)
@@ -86,7 +86,7 @@ def gov_constraint(x):
     l = x[n+1:2*n+1]
     
     _, agg_polluting, converged, c, d, ell, w, p_d = solver.solve(tau_w, tau_z, l, G, n=n)
-    return np.sum(tau_w * phi * w) + tau_z * agg_polluting * (1 - np.sum(l)) - G
+    return (1 - np.sum(l))*(np.sum(tau_w * phi * w) + tau_z * agg_polluting) - G
 
 # 5. Solve the Planner Problem
 # Initial guesses: note lump-sum shares sum to 1.

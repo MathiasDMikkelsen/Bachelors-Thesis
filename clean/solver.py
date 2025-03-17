@@ -47,11 +47,14 @@ def full_system(u, params, n=5):
     r     = params['r']
     G     = params['G']
     
-    pollution_tax_rev = (z_c + z_d)*tau_z
+    tax_rev = 0
+    for i in range(n):
+        tax_rev += tau_w[i]*phi[i]*w*(t_total-ell[i])
+    tax_rev += (z_c + z_d)*tau_z
     
     hh_eq = np.empty(3*n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*phi[i]*w*(t_total - ell[i]) + l_vec[i]*pollution_tax_rev
+        inc_i = (1.0 - tau_w[i])*phi[i]*w*(t_total - ell[i]) + l_vec[i]*tax_rev
         c_i = (inc_i - p_d*d[i]) / p_c  
         
         eq_c   = alpha/c_i - lam[i]*p_c
@@ -110,18 +113,21 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
     
     d, ell, lam, t_c, t_d, z_c, z_d, p_d, w = transform(sol.x, params, n)
     
-    pollution_tax_rev = tau_z*(z_c + z_d)
+    tax_rev = 0
+    for i in range(n):
+        tax_rev += tau_w[i]*params['phi'][i]*w*(params['t_total']-ell[i])
+    tax_rev += (z_c + z_d)*tau_z
     
     # Back out c_i for each household
     c = np.empty(n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*pollution_tax_rev
+        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev
         c[i] = (inc_i - p_d*d[i]) / params['p_c']
     
     # Compute budget errors for each household
     budget_errors = np.empty(n)
     for i in range(n):
-        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*pollution_tax_rev)
+        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev)
     
     # Compute household utilities: u_i = alpha*ln(c_i) + beta*ln(d_i-d0) + gamma*ln(ell_i)
     utilities = np.empty(n)
