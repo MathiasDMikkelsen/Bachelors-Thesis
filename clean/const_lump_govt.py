@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-import solver
+import solver_constlump as solver
 
 np.set_printoptions(suppress=True, precision=8)
 
@@ -20,7 +20,7 @@ def swf_obj(x):
     l = x[n+1:2*n+1]
     
     # Solve the economic model:
-    utilities, agg_polluting, converged, c, d, ell, w, p_d, _ = solver.solve(tau_w, tau_z, l, G, n=n)
+    utilities, agg_polluting, converged, c, d, ell, w, p_d, l_val, _ = solver.solve(tau_w, tau_z, G, n=n)
     if not converged:
         return 1e10  # Penalize non-convergence
     
@@ -34,7 +34,7 @@ def ic_constraints(x):
     tau_z = x[n]
     l = x[n+1:2*n+1]
     
-    utilities, agg_polluting, converged, c, d, ell, w, p_d, tax_rev = solver.solve(tau_w, tau_z, l, G, n=n)
+    utilities, agg_polluting, converged, c, d, ell, w, p_d, l_val, _ = solver.solve(tau_w, tau_z, G, n=n)
     if not converged:
         return -np.ones(n*(n-1)) * 1e6  # Large negative penalty if not converged
 
@@ -46,7 +46,7 @@ def ic_constraints(x):
     # Compute income measure I for each type:
     I = np.zeros(n)
     for j in range(n):
-        I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w + l[j]*tax_rev
+        I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w + l_val
 
     g_list = []
     for i in range(n):
@@ -79,14 +79,6 @@ def ic_constraints(x):
     
     return np.array(g_list)
 
-# 4. Government Spending Constraint
-def gov_constraint(x):
-    tau_w = x[0:n]
-    tau_z = x[n]
-    l = x[n+1:2*n+1]
-    
-    _, agg_polluting, converged, c, d, ell, w, p_d, tax_rev = solver.solve(tau_w, tau_z, l, G, n=n)
-    return (1 - np.sum(l))*(np.sum(tau_w * phi * w*(1-ell)) + tau_z * agg_polluting) - G
 
 # 5. Solve the Planner Problem
 # Since lump sum shares should not sum to 1, we choose an initial guess that does not sum to 1.
@@ -100,7 +92,7 @@ bounds = [(-2.0, 2.0)] * n + [(0.1, 100.0)] + [(-2.0, 2.0)] * n
 
 # For now we only enforce the government spending constraint; you can enable the IC constraints as needed.
 constraints = [
-    {'type': 'eq', 'fun': gov_constraint},
+    #{'type': 'eq', 'fun': gov_constraint},
     {'type': 'ineq', 'fun': ic_constraints}  # Uncomment if you want to enforce IC constraints.
 ]
 
