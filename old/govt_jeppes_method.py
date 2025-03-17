@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-import jeppes_method
+import old.jeppes_method as jeppes_method
 
 # 1) Model Parameters
 xi = 3.0

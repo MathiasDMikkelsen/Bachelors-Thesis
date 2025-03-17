@@ -1,7 +1,7 @@
 import numpy as np
 import importlib
 from scipy.optimize import minimize
-import complete_equi
+import old.complete_equi as complete_equi
 
 importlib.reload(complete_equi)
 
