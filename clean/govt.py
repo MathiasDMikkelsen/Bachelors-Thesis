@@ -96,9 +96,8 @@ initial_l = [1.0 / n] * n
 initial_guess = np.array(initial_tau_w + initial_tau_z + initial_l)
 
 # Define bounds for each variable:
-bounds = [(-2.0, 1.0)] * n + [(0.1, 100.0)] + [(-2.0, 1.0)] * n
+bounds = [(-5.0, 5.0)] * n + [(0.1, 100.0)] + [(-5.0, 5.0)] * n
 
-# Constraints: enforcing lump-sum shares sum to 1, government spending, and IC constraints.
 constraints = [
     #{'type': 'eq', 'fun': lambda x: np.sum(x[n+1:2*n+1]) - 1.0},  # Lump-sum shares constraint
     {'type': 'eq', 'fun': gov_constraint},                        # Gov spending constraint
