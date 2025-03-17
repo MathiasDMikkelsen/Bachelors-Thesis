@@ -2,21 +2,18 @@ import numpy as np
 import numba as nb
 from scipy.optimize import root
 import blocks
-from blocks import firm_c_focs
 
-# 2. transform func
+# 1. transform 
 def transform(u, params, n=5):
 
     d0 = params['d0']
     
-    # Households:
     d_raw   = u[0:5]
     ell_raw = u[5:10]
     lam     = u[10:15]
     d       = d0 + np.exp(d_raw)
     ell     = 1.0/(1.0 + np.exp(-ell_raw))
     
-    # Market:
     t_c  = n/(1.0 + np.exp(-u[15]))
     t_d  = n/(1.0 + np.exp(-u[16]))
     z_c  = np.exp(u[17])
@@ -35,6 +32,7 @@ def full_system(u, params, n=5):
     alpha = params['alpha']
     beta  = params['beta']
     gamma = params['gamma']
+    x = params['x']
     d0    = params['d0']
     p_c   = params['p_c']
     tau_z = params['tau_z']
@@ -45,6 +43,7 @@ def full_system(u, params, n=5):
     eps_c = params['epsilon_c']
     eps_d = params['epsilon_d']
     r     = params['r']
+    G     = params['G']
     
     pollution_tax_rev = (z_c + z_d)*tau_z
     
@@ -61,27 +60,26 @@ def full_system(u, params, n=5):
         hh_eq[3*i+1] = eq_d
         hh_eq[3*i+2] = eq_ell
     
-    # Firm FOCs:
-    fc = blocks.firm_c_focs(t_c, z_c, p_c, w, tau_z, eps_c, r)
-    fd = blocks.firm_d_focs(t_d, z_d, p_d, w, tau_z, eps_d, r)
+    fc = blocks.firm_c_focs(t_c, z_c, p_c, w, tau_z, eps_c, r, x)
+    fd = blocks.firm_d_focs(t_d, z_d, p_d, w, tau_z, eps_d, r, x)
     
-    # Market clearing:
-    y_d = blocks.firm_d_production(t_d, z_d, eps_d, r)
-    eq_d_mkt = np.sum(d) + 0.5 - y_d
+    y_d = blocks.firm_d_production(t_d, z_d, eps_d, r, x)
+    eq_d_mkt = np.sum(d) + 0.5 - y_d + 0.5 * G
     eq_l_mkt = np.sum(ell) + t_c + t_d - n*t_total
     
     return np.concatenate((hh_eq, fc, fd, [eq_d_mkt, eq_l_mkt]))
-# end full system
+# end constructing full system
 
-# solve system
-def solve(tau_w, tau_z, l_vec, n=5):
+# 3. solve system
+def solve(tau_w, tau_z, l_vec, G, n=5):
     
     params = {
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.2,
-        'p_c':       1.0, # normalized price of clean good
+        'd0':        0.1,
+        'x':         100000.0,
+        'p_c':       1.0, 
         'epsilon_c': 0.995,
         'epsilon_d': 0.92,
         'r':         0.5,
@@ -90,6 +88,7 @@ def solve(tau_w, tau_z, l_vec, n=5):
         'phi':       np.array([0.1*5, 0.1*5, 0.2*5, 0.3*5, 0.511*5]),
         'l':         l_vec, 
         't_total':   1.0, 
+        'G':         G
     }
     
     u0 = np.zeros(21)
@@ -103,29 +102,24 @@ def solve(tau_w, tau_z, l_vec, n=5):
     u0[19]    = 0.0                # ln(p_d)=0 => p_d=1
     u0[20]    = np.log(5.0)        # ln(w)=ln(5) => w=5
     
-    # Solve using LM
     sol = root(lambda x: full_system(x, params, n), u0, method='lm', tol=1e-12)
     final_res = full_system(sol.x, params, n)
     resid_norm = np.linalg.norm(final_res)
     
-    # Transform solution to get variables
     d, ell, lam, t_c, t_d, z_c, z_d, p_d, w = transform(sol.x, params, n)
     
-    tax_rev = 0.0
-    for i in range(n):
-        tax_rev += tau_w[i]*w*(1.0 - ell[i])*params['phi'][i]
-    tax_rev += tau_z*(z_c + z_d)
+    pollution_tax_rev = tau_z*(z_c + z_d)
     
     # Back out c_i for each household
     c = np.empty(n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev
+        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*pollution_tax_rev
         c[i] = (inc_i - p_d*d[i]) / params['p_c']
     
     # Compute budget errors for each household
     budget_errors = np.empty(n)
     for i in range(n):
-        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev)
+        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*pollution_tax_rev)
     
     # Compute household utilities: u_i = alpha*ln(c_i) + beta*ln(d_i-d0) + gamma*ln(ell_i)
     utilities = np.empty(n)
@@ -136,16 +130,16 @@ def solve(tau_w, tau_z, l_vec, n=5):
     aggregate_polluting = z_d + z_c
     
     # Compute firm outputs and profits
-    y_c = blocks.firm_c_production(t_c, z_c, params['epsilon_c'], params['r'])
-    y_d = blocks.firm_d_production(t_d, z_d, params['epsilon_d'], params['r'])
+    y_c = blocks.firm_c_production(t_c, z_c, params['epsilon_c'], params['r'], params['x'])
+    y_d = blocks.firm_d_production(t_d, z_d, params['epsilon_d'], params['r'], params['x'])
     profit_c = params['p_c']*y_c - (w*t_c + tau_z*z_c)
     profit_d = p_d*y_d - (w*t_d + tau_z*z_d)
     
-    # Print equilibrium results
     print("equilibirum:")
     print("convergence ", sol.success)
     print("solution message ", sol.message)
     print("residual norm", resid_norm)
+    print("")
     
     print("hh solution:")
     for i in range(n):
@@ -162,28 +156,33 @@ def solve(tau_w, tau_z, l_vec, n=5):
     print(f"z: {z_c:.4f}")
     print(f"y: {y_c:.4f}")
     print(f"pi: {profit_c:.4f}")
+    print("")
     
     print("firm d:")
     print(f"t_d: {t_d:.4f}")
     print(f"z_d: {z_d:.4f}")
     print(f"y_d: {y_d:.4f}")
     print(f"Profit_D: {profit_d:.4f}")
+    print("")
     
     print("prices:")
     print(f"p_d: {p_d:.4f}")
     print(f"w:   {w:.4f}")
+    print("")
     
     print("final residuals:")
     print(final_res)
     
-    return utilities, aggregate_polluting, sol.success, c, d, ell
+    return utilities, aggregate_polluting, sol.success, c, d, ell, w
+# end solve system
 
-# test
+# 4. test
 n = 5
 tau_w_arr = np.array([0.10, 0.12, 0.15, 0.18, 0.20])
 l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-tau_z = 1.0
-utilities, aggregate_polluting, first_converged, c, d, ell = solve(tau_w_arr, tau_z, l_arr, n=n)
+G = 1.0
+tau_z = 2.0
+utilities, aggregate_polluting, first_converged, c, d, ell, w = solve(tau_w_arr, tau_z, l_arr, G, n=n)
     
 print("returned Values:")
 print("utilities:", utilities)
@@ -192,3 +191,4 @@ print("convergence:", first_converged)
 print("consumption:", c)
 print("dirty good consumption:", d)
 print("labor supply:", ell)
+# end test
