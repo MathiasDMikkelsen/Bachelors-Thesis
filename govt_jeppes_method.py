@@ -72,7 +72,7 @@ def swf_obj(x):
         return 1e10
     
     # Solve the equilibrium
-    utilities, agg_polluting, converged, _, _, _ = main_solve_print_extended(tau_w, tau_z, l, n=n)
+    utilities, agg_polluting, converged, c, d, ell = main_solve_print_extended(tau_w, tau_z, l, n=n)
     if not converged:
         return 1e10
     
@@ -83,26 +83,12 @@ def swf_obj(x):
 # 4) Mirrlees-Type IC Constraints
 ###############################################################################
 def ic_constraints(x):
-    """
-    For each pair i != j, we require:
-        U_i >= U_i^j
-    or equivalently:
-        U_i - U_i^j >= 0.
-    
-    We'll compute:
-      - "true" utilities U_i,
-      - c_j, d_j, ell_j for each j, then net income I_j,
-      - compute ell_i^j if i pretends to be j,
-      - define U_i^j = U(c_j, d_j, ell_i^j).
-    
-    We'll return an array of length n*(n-1), each element must be >= 0.
-    """
     tau_w = x[0:n]
     tau_z = x[n]
     l = x[n+1:2*n+1]
     
     # Solve for the equilibrium details
-    utilities, _, converged, c, d, ell = main_solve_print_extended(tau_w, tau_z, l, n=n)
+    utilities, agg_polluting, converged, c, d, ell = main_solve_print_extended(tau_w, tau_z, l, n=n)
     if not converged:
         # If not converged, force a large negative to break feasibility
         return -np.ones(n*(n-1)) * 1e6
@@ -161,7 +147,7 @@ def ic_constraints(x):
 # 5) Setup and Solve the Government's Problem
 ###############################################################################
 # Initial guess: tau_w (n), tau_z, l_vector (n)
-initial_guess = np.array([0.15]*n + [3.0] + [0.2]*n)
+initial_guess = np.array([0.05]*n + [3.0] + [0.01]*n)
 
 # Bounds for each variable
 bounds = [(0.0, 1.0)]*n + [(0.1, 100.0)] + [(0.0, 1.0)]*n
@@ -172,7 +158,7 @@ bounds = [(0.0, 1.0)]*n + [(0.1, 100.0)] + [(0.0, 1.0)]*n
 # 3) Mirrlees-type IC constraints: U_i - U_i^j >= 0
 constraints = [
     {'type': 'eq', 'fun': lambda x: np.sum(x[n+1:2*n+1]) - 1.0},
-    {'type': 'eq', 'fun': lambda x: np.sum(x[0:n]*phi*w) - G},
+    {'type': 'eq', 'fun': lambda x: np.sum(x[0:n]*phi*w) - G}, # we need to add revenues from aggregare pollution here and then substract them again
     {'type': 'ineq', 'fun': ic_constraints}
 ]
 
