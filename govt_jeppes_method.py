@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
 # 1) Model Parameters
-xi = 1.0
+xi = 3.0
 theta = 1.0
 n = 5   # number of households
 G = 1.0 # sum_{i} tau_w[i]*phi[i]*w[i] must equal G
