@@ -51,7 +51,7 @@ def full_system(u, params, n=5):
         tax_rev += tau_w[i]*phi[i]*w*(t_total-ell[i])
     tax_rev += (z_c + z_d)*tau_z
     
-    l_val = tax_rev / n #Lumpsum value
+    l_val = (tax_rev - G) / n #Lumpsum value
     
     hh_eq = np.empty(3*n)
     for i in range(n):
@@ -118,7 +118,7 @@ def solve(tau_w, tau_z, G, n=5):
         tax_rev += tau_w[i]*params['phi'][i]*w*(params['t_total']-ell[i])
     tax_rev += (z_c + z_d)*tau_z
     
-    l_val = tax_rev / n
+    l_val = (tax_rev - G) / n
     
     # Back out c_i for each household
     c = np.empty(n)
@@ -183,7 +183,7 @@ def solve(tau_w, tau_z, G, n=5):
     print("final residuals:")
     print(final_res)
     
-    return utilities, aggregate_polluting, sol.success, c, d, ell, w, p_d, tax_rev, params
+    return utilities, aggregate_polluting, sol.success, c, d, ell, w, p_d, tax_rev, l_val, params
 # end solve system
 
 # 4. test
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
     G = 1.0
     tau_z = 3.0
-    utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, tax_rev, params = solve(tau_w_arr, tau_z, G, n=n)
+    utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, tax_rev, l_val, params = solve(tau_w_arr, tau_z, G, n=n)
         
     print("returned Values:")
     print("utilities:", utilities)
