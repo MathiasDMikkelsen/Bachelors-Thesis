@@ -79,7 +79,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.5,
+        'd0':        0.1,
         'x':         100.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,

@@ -6,10 +6,10 @@ import solver
 np.set_printoptions(suppress=True, precision=8)
 
 # 1. params
-xi = 1.0
+xi = 0.1
 theta = 1.0
 n = 5   
-G = 1.0
+G = 5.0
 phi = np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5])
 # end params
 
@@ -42,7 +42,7 @@ def ic_constraints(x):
         return -np.ones(n*(n-1)) * 1e6
     
     alpha, beta, gamma = 0.7, 0.2, 0.2
-    d0 = 0.5
+    d0 = 0.1
     T = 1.0 
     
     I = np.zeros(n)
