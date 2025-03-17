@@ -6,10 +6,10 @@ import solver
 np.set_printoptions(suppress=True, precision=8)
 
 # 1. params
-xi = 0.1
+xi = 1.0
 theta = 1.0
 n = 5   
-G = 5.0
+G = 2.0
 phi = np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5])
 # end params
 
@@ -23,7 +23,7 @@ def swf_obj(x):
     if not np.isclose(np.sum(l), 1.0):
         return 1e10
     
-    utilities, agg_polluting, converged, c, d, ell, w = solver.solve(tau_w, tau_z, l, G, n=n)
+    utilities, agg_polluting, converged, c, d, ell, w, p_d = solver.solve(tau_w, tau_z, l, G, n=n)
     if not converged:
         return 1e10
     
@@ -37,7 +37,7 @@ def ic_constraints(x):
     tau_z = x[n]
     l = x[n+1:2*n+1]
     
-    utilities, agg_polluting, converged, c, d, ell, w = solver.solve(tau_w, tau_z, l, G, n=n)
+    utilities, agg_polluting, converged, c, d, ell, w, p_d = solver.solve(tau_w, tau_z, l, G, n=n)
     if not converged:
         return -np.ones(n*(n-1)) * 1e6
     
@@ -45,9 +45,9 @@ def ic_constraints(x):
     d0 = 0.1
     T = 1.0 
     
-    I = np.zeros(n)
-    for j in range(n):
-        I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w
+    #I = np.zeros(n)
+    #for j in range(n):
+     #   I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w+l[j]*tau_z*agg_polluting
     
     g_list = []
     
@@ -66,7 +66,7 @@ def ic_constraints(x):
                 g_list.append(-1e6)
                 continue
             
-            ell_i_j = T - I[j]/denom
+            ell_i_j = T- (c[j]+p_d*d[j])/denom
             if ell_i_j <= 0:
                 U_i_j = -1e6
             else:
@@ -88,12 +88,12 @@ def gov_constraint(x):
     tau_z = x[n]
     l = x[n+1:2*n+1]
     
-    _, agg_polluting, converged, c, d, ell, w = solver.solve(tau_w, tau_z, l, G, n=n)
+    _, agg_polluting, converged, c, d, ell, w, p_d = solver.solve(tau_w, tau_z, l, G, n=n)
     return np.sum(tau_w * phi * w) + tau_z * agg_polluting *(1- np.sum(l)) - G
 # end government spending constraint
 
 # 5. solve planner problem
-initial_guess = np.array([0.05]*n + [3.0] + [0.01]*n)
+initial_guess = np.array([0.05]*n + [0.1] + [0.01]*n)
 
 bounds = [(0.0, 1.0)]*n + [(0.1, 100.0)] + [(0.0, 1.0)]*n
 

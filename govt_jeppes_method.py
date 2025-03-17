@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+import jeppes_method
 
 # 1) Model Parameters
 xi = 3.0
@@ -9,47 +10,6 @@ n = 5   # number of households
 G = 1.0 # sum_{i} tau_w[i]*phi[i]*w[i] must equal G
 phi = np.ones(n)  # participation factors (adjust as needed)
 w   = np.ones(n)  # wages (adjust as needed)
-
-###############################################################################
-# 2) Placeholder for your extended jeppes_method
-###############################################################################
-def main_solve_print_extended(tau_w, tau_z, l, n=5):
-    """
-    This function should:
-      1) Solve the equilibrium (just like main_solve_print).
-      2) Return:
-          - utilities[i] = U_i,
-          - c[i], d[i], ell[i] for each household,
-          - a boolean flag 'converged' indicating solver success.
-    
-    For demonstration, we mock up some arrays. You must replace this
-    with your actual model solution. 
-    """
-    # In a real version, you'd solve your 21-equation system here.
-    # We'll produce dummy values for demonstration only:
-    converged = True  # or False if your root finder fails
-    
-    # Suppose each household ends up with these dummy results:
-    c = np.array([1.0, 1.2, 1.4, 1.6, 1.8])  # consumption of the clean good
-    d = np.array([0.8, 0.9, 1.0, 1.1, 1.2])  # polluting good
-    ell = np.array([0.5, 0.4, 0.3, 0.35, 0.45])  # leisure
-    
-    # Utility function: U_i = alpha ln(c_i) + beta ln(d_i - d0) + gamma ln(ell_i)
-    # (Just an example; adapt to your real code.)
-    alpha, beta, gamma, d0 = 0.7, 0.2, 0.2, 0.01
-    utilities = np.zeros(n)
-    for i in range(n):
-        if c[i] <= 0 or d[i] <= d0 or ell[i] <= 0:
-            utilities[i] = -1e6  # penalty for invalid
-        else:
-            utilities[i] = (alpha*np.log(c[i]) +
-                            beta*np.log(d[i] - d0) +
-                            gamma*np.log(ell[i]))
-    
-    # Let's say "aggregate_polluting" is sum of polluting inputs in the economy
-    aggregate_polluting = 2.0  # dummy value
-    
-    return utilities, aggregate_polluting, converged, c, d, ell
 
 ###############################################################################
 # 3) Social Welfare Objective
