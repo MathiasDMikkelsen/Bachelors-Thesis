@@ -40,7 +40,6 @@ def full_system(u, params, n=5):
     tau_z = params['tau_z']
     tau_w = params['tau_w']
     phi   = params['phi']
-    l_vec = params['l']
     t_total = params['t_total']
     eps_c = params['epsilon_c']
     eps_d = params['epsilon_d']
@@ -52,9 +51,11 @@ def full_system(u, params, n=5):
         tax_rev += tau_w[i]*phi[i]*w*(t_total-ell[i])
     tax_rev += (z_c + z_d)*tau_z
     
+    l_val = tax_rev / n #Lumpsum value
+    
     hh_eq = np.empty(3*n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*phi[i]*w*(t_total - ell[i]) + l_vec[i]*tax_rev
+        inc_i = (1.0 - tau_w[i])*phi[i]*w*(t_total - ell[i]) + l_val
         c_i = (inc_i - p_d*d[i]) / p_c  
         
         eq_c   = alpha/c_i - lam[i]*p_c
@@ -76,13 +77,13 @@ def full_system(u, params, n=5):
 # end constructing full system
 
 # 3. solve system
-def solve(tau_w, tau_z, l_vec, G, n=5):
+def solve(tau_w, tau_z, G, n=5):
     
     params = {
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.2,
+        'd0':        0.1,
         'x':         100.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,
@@ -90,8 +91,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'r':         0.5,
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
-        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.5175*5]),
-        'l':         l_vec, 
+        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
         't_total':   1.0, 
         'G':         G
     }
@@ -118,18 +118,20 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         tax_rev += tau_w[i]*params['phi'][i]*w*(params['t_total']-ell[i])
     tax_rev += (z_c + z_d)*tau_z
     
+    l_val = tax_rev / n
+    
     # Back out c_i for each household
     c = np.empty(n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev
+        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_val
         c[i] = (inc_i - p_d*d[i]) / params['p_c']
     
     # Compute budget errors for each household
     budget_errors = np.empty(n)
     for i in range(n):
-        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev)
+        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_val)
     
-    # Compute household utilities: u_i = alpha*ln(c_i) + beta*ln(d_i-d0) + gamma*ln(ell_i)
+    # Compute household utilities: u_i = alpha*ln(c_i) + beta*ln(d_i-params['d0']) + gamma*ln(ell_i)
     utilities = np.empty(n)
     for i in range(n):
         utilities[i] = params['alpha']*np.log(c[i]) + params['beta']*np.log(d[i]-params['d0']) + params['gamma']*np.log(ell[i])
@@ -185,20 +187,19 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
 # end solve system
 
 # 4. test
-
-n = 5
-tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
-l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-G = 1.0
-tau_z = 3.0
-utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, tax_rev, params = solve(tau_w_arr, tau_z, l_arr, G, n=n)
-    
-print("returned Values:")
-print("utilities:", utilities)
-print("aggregate pollution:", aggregate_polluting)
-print("convergence:", first_converged)
-print("consumption:", c)
-print("dirty good consumption:", d)
-print("labor supply:", ell)
-print("tax revenue:", tax_rev)
+if __name__ == "__main__":
+    n = 5
+    tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
+    G = 1.0
+    tau_z = 3.0
+    utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, tax_rev, params = solve(tau_w_arr, tau_z, G, n=n)
+        
+    print("returned Values:")
+    print("utilities:", utilities)
+    print("aggregate pollution:", aggregate_polluting)
+    print("convergence:", first_converged)
+    print("consumption:", c)
+    print("dirty good consumption:", d)
+    print("labor supply:", ell)
+    print("tax revenue:", tax_rev)
 # end test
