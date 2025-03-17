@@ -40,7 +40,7 @@ def ic_constraints(x):
 
     # Parameters for utility
     alpha, beta, gamma = 0.7, 0.2, 0.2
-    d0 = 0.
+    d0 = 0.1
     T = 1.0
     
     # Compute income measure I for each type:

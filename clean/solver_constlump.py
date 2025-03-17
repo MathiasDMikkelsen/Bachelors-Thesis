@@ -201,5 +201,4 @@ if __name__ == "__main__":
     print("consumption:", c)
     print("dirty good consumption:", d)
     print("labor supply:", ell)
-    print("tax revenue:", tax_rev)
 # end test
