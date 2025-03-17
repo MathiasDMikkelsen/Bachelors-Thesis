@@ -3,6 +3,8 @@ import numba as nb
 from scipy.optimize import root
 import blocks
 
+np.set_printoptions(suppress=True, precision=8)
+
 # 1. transform 
 def transform(u, params, n=5):
 
@@ -77,8 +79,8 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.1,
-        'x':         100000.0,
+        'd0':        0.5,
+        'x':         100.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,
         'epsilon_d': 0.92,
@@ -162,7 +164,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
     print(f"t_d: {t_d:.4f}")
     print(f"z_d: {z_d:.4f}")
     print(f"y_d: {y_d:.4f}")
-    print(f"Profit_D: {profit_d:.4f}")
+    print(f"pi: {profit_d:.4f}")
     print("")
     
     print("prices:")

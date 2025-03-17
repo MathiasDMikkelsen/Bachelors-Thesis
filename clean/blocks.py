@@ -4,9 +4,6 @@ import numba as nb
 # 1. blocks
 @nb.njit
 def firm_c_production(t_c, z_c, epsilon_c, r, x):
-    """
-    If z_c > x * t_c, output is zero. Otherwise, output is the usual CES form.
-    """
     if z_c > x * t_c:
         return 0.0
     
@@ -18,9 +15,6 @@ def firm_c_production(t_c, z_c, epsilon_c, r, x):
 
 @nb.njit
 def firm_d_production(t_d, z_d, epsilon_d, r, x):
-    """
-    If z_d > x * t_d, output is zero. Otherwise, output is the usual CES form.
-    """
     if z_d > x * t_d:
         return 0.0
     
