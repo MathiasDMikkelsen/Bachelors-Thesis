@@ -6,7 +6,7 @@ import solver
 np.set_printoptions(suppress=True, precision=8)
 
 # 1. Parameters
-xi = 7.0
+xi = 10.0
 theta = 1.0
 n = 5
 G = 2.0
@@ -46,7 +46,7 @@ def ic_constraints(x):
     # Compute income measure I for each type:
     I = np.zeros(n)
     for j in range(n):
-        I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w + l[j]*tau_z*agg_polluting
+        I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w + l[j]*
 
     g_list = []
     for i in range(n):
@@ -101,7 +101,7 @@ bounds = [(-5.0, 5.0)] * n + [(0.1, 100.0)] + [(-5.0, 5.0)] * n
 constraints = [
     #{'type': 'eq', 'fun': lambda x: np.sum(x[n+1:2*n+1]) - 1.0},  # Lump-sum shares constraint
     {'type': 'eq', 'fun': gov_constraint},                        # Gov spending constraint
-    {'type': 'ineq', 'fun': ic_constraints}                         # IC constraints
+    #{'type': 'ineq', 'fun': ic_constraints}                         # IC constraints
 ]
 
 res = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
