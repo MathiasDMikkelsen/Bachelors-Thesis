@@ -82,7 +82,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.1,
+        'd0':        0.2,
         'x':         100.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,
@@ -90,7 +90,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'r':         0.5,
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
-        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
+        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.5175*5]),
         'l':         l_vec, 
         't_total':   1.0, 
         'G':         G
