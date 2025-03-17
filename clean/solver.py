@@ -66,7 +66,7 @@ def full_system(u, params, n=5):
     fd = blocks.firm_d_focs(t_d, z_d, p_d, w, tau_z, eps_d, r, x)
     
     y_d = blocks.firm_d_production(t_d, z_d, eps_d, r, x)
-    eq_d_mkt = np.sum(d) + 0.5 - y_d + 0.5 * G
+    eq_d_mkt = np.sum(d) + 0.5 - y_d + 0.5 * G/p_d
     eq_l_mkt = np.sum(ell) + t_c + t_d - n*t_total
     
     return np.concatenate((hh_eq, fc, fd, [eq_d_mkt, eq_l_mkt]))
@@ -87,7 +87,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'r':         0.5,
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
-        'phi':       np.array([0.1*5, 0.1*5, 0.2*5, 0.3*5, 0.511*5]),
+        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
         'l':         l_vec, 
         't_total':   1.0, 
         'G':         G
@@ -180,10 +180,10 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
 
 # 4. test
 n = 5
-tau_w_arr = np.array([0.10, 0.12, 0.15, 0.18, 0.20])
+tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
 l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
 G = 1.0
-tau_z = 2.0
+tau_z = 4.0
 utilities, aggregate_polluting, first_converged, c, d, ell, w = solve(tau_w_arr, tau_z, l_arr, G, n=n)
     
 print("returned Values:")
