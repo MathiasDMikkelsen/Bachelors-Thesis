@@ -191,7 +191,7 @@ if __name__ == "__main__":
     n = 5
     tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
     G = 1.0
-    tau_z = 4.0
+    tau_z = 3.0
     utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, l_val, params = solve(tau_w_arr, tau_z, G, n=n)
         
     print("returned Values:")
