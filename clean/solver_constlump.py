@@ -88,7 +88,7 @@ def solve(tau_w, tau_z, G, n=5):
         'p_c':       1.0, 
         'epsilon_c': 0.995,
         'epsilon_d': 0.92,
-        'r':         0.5,
+        'r':         -1.0,
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
         'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
@@ -129,7 +129,7 @@ def solve(tau_w, tau_z, G, n=5):
     # Compute budget errors for each household
     budget_errors = np.empty(n)
     for i in range(n):
-        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_val)
+        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_val) 
     
     # Compute household utilities: u_i = alpha*ln(c_i) + beta*ln(d_i-params['d0']) + gamma*ln(ell_i)
     utilities = np.empty(n)
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     n = 5
     tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
     G = 1.0
-    tau_z = 3.0
+    tau_z = 4.0
     utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, l_val, params = solve(tau_w_arr, tau_z, G, n=n)
         
     print("returned Values:")
