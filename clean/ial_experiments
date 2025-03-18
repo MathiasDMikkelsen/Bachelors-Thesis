@@ -1,0 +1,179 @@
+import numpy as np
+from scipy.optimize import root
+import blocks
+
+np.set_printoptions(suppress=True, precision=8)
+
+def household_allocation(params, p_d, w, L):
+    """
+    Computes each household's allocations (ℓ, c, d) under Stone–Geary preferences:
+    
+      U = α ln(c) + β ln(d - d₀) + γ ln(ℓ),
+    
+    subject to the budget
+      p_c c + p_d d = (1 - τw) φ w (t_total - ℓ) + L.
+    
+    The interior closed-form solution for leisure is (before transformation):
+    
+      raw_ell = (γ/(α+β+γ)) * [ t_total + (L - p_d d₀)/((1-τw) φ w) ].
+    
+    To guarantee that ℓ > 0 (since ln(ℓ) enters utility) and ℓ < t_total, we transform:
+    
+      ℓ = t_total/(1 + exp(-raw_ell)).
+    
+    For each household i, if the “income‐term”
+    
+         I_i = (1 - τw_i) φ_i w t_total + L - p_d d₀
+    
+    is positive we use the interior solution for c and d:
+    
+         c = (α/(α+β+γ)) * (I_i)/p_c,
+         d = d₀ + (β/(α+β+γ)) * (I_i)/p_d.
+    
+    If I_i ≤ 0 then the household is cornered in labor, setting ℓ = t_total,
+    and then c = L/p_c and d = d₀.
+    """
+    alpha = params['alpha']
+    beta  = params['beta']
+    gamma = params['gamma']
+    d0    = params['d0']
+    t_total = params['t_total']
+    p_c  = params['p_c']
+    phi  = params['phi']
+    tau_w = params['tau_w']
+    n = len(phi)
+    
+    ell = np.empty(n)
+    c   = np.empty(n)
+    d   = np.empty(n)
+    
+    denom = alpha + beta + gamma
+    for i in range(n):
+        I_i = (1 - tau_w[i]) * phi[i] * w * t_total + L - p_d*d0
+        # Compute the raw interior solution for leisure:
+        raw_ell = (gamma/denom) * (t_total + (L - p_d*d0)/((1 - tau_w[i])*phi[i]*w))
+        if I_i > 0:
+            # Transform raw_ell via a logistic so that ℓ ∈ (0, t_total)
+            ell[i] = t_total / (1 + np.exp(-raw_ell))
+            c[i] = (alpha/denom) * (I_i / p_c)
+            d[i] = d0 + (beta/denom) * (I_i / p_d)
+        else:
+            # Corner: the household cannot afford more than subsistence d,
+            # so it takes full leisure and finances consumption solely via L.
+            ell[i] = t_total
+            c[i] = L / p_c
+            d[i] = d0
+    return ell, c, d
+
+def system_F(x, params):
+    """
+    x = [t_c, t_d, z_c, z_d, p_d, w, L]
+    
+    The equilibrium system consists of:
+      1-2. Clean firm FOCs (from blocks.firm_c_focs),
+      3-4. Dirty firm FOCs (from blocks.firm_d_focs),
+      5. Labor market clearing: Σ φ_i (t_total - ℓ_i) = t_c + t_d,
+      6. Dirty good market clearing: Σ d_i = y_d - 0.5 G/p_d,
+      7. Government budget: G + n L = (wage tax) + τ_z (z_c + z_d).
+    """
+    t_c, t_d, z_c, z_d, p_d, w, L = x
+    n = len(params['phi'])
+    alpha = params['alpha']
+    beta  = params['beta']
+    gamma = params['gamma']
+    d0    = params['d0']
+    tau_w = params['tau_w']
+    tau_z = params['tau_z']
+    phi   = params['phi']
+    G     = params['G']
+    t_total = params['t_total']
+    p_c  = params['p_c']
+    eps_c = params['epsilon_c']
+    eps_d = params['epsilon_d']
+    r    = params['r']
+    X    = params['x']
+    
+    # (i) Compute household allocations (allowing for corner labor)
+    ell, c_house, d_house = household_allocation(params, p_d, w, L)
+    
+    # (ii) Firm FOCs:
+    fc = blocks.firm_c_focs(t_c, z_c, p_c, w, tau_z, eps_c, r, X)  # returns [FOC_t_c, FOC_z_c]
+    fd = blocks.firm_d_focs(t_d, z_d, p_d, w, tau_z, eps_d, r, X)  # returns [FOC_t_d, FOC_z_d]
+    
+    # (iii) Labor market clearing: Σ φ_i (t_total - ℓ_i) = t_c + t_d.
+    lhs_labor = sum(phi[i]*(t_total - ell[i]) for i in range(n))
+    eq_l = lhs_labor - (t_c + t_d)
+    
+    # (iv) Dirty good market clearing: Σ d_i = y_d - 0.5*G/p_d.
+    y_d = blocks.firm_d_production(t_d, z_d, eps_d, r, X)
+    sum_d = np.sum(d_house)
+    eq_d = sum_d - y_d + 0.5*G/p_d
+    
+    # (v) Government budget: G + n L = wage tax + τ_z (z_c+z_d),
+    wage_tax = sum(tau_w[i]*phi[i]*w*(t_total - ell[i]) for i in range(n))
+    env_tax = tau_z*(z_c + z_d)
+    eq_gov = G + n*L - (wage_tax + env_tax)
+    
+    F = np.empty(7)
+    F[0] = fc[0]
+    F[1] = fc[1]
+    F[2] = fd[0]
+    F[3] = fd[1]
+    F[4] = eq_l
+    F[5] = eq_d
+    F[6] = eq_gov
+    return F
+
+def solve_calibrated_corner():
+    # Calibration parameters taken from Klenert et al.
+    # Here we use d0 = 0.5 as in the paper. This may force some low-income households to choose ℓ = 1.
+    params = {
+        'alpha':     0.7,
+        'beta':      0.2,
+        'gamma':     0.2,
+        'd0':        0.5,         # subsistence level for polluting consumption
+        'x':         1.0,         # total factor productivity = 1
+        'p_c':       1.0, 
+        'epsilon_c': 0.995,
+        'epsilon_d': 0.92,
+        'r':         -1.0,        # gives σ = 1/(1-(-1)) = 0.5
+        'tau_z':     0.5,         # pre-existing environmental tax
+        'tau_w':     np.array([0.015, 0.072, 0.115, 0.156, 0.24]),  # empirical income tax rates
+        'phi':       np.array([0.03, 0.0825, 0.141, 0.229, 0.511]), # productivities by quintile
+        't_total':   1.0, 
+        'G':         5.0          # government spending ~24% of GDP
+    }
+    
+    # Unknown vector: [t_c, t_d, z_c, z_d, p_d, w, L]
+    x0 = np.array([0.3, 0.3, 1.0, 1.0, 1.0, 5.0, 0.0])  # initial guess
+    
+    sol = root(lambda x: system_F(x, params), x0, method='lm', tol=1e-12)
+    if not sol.success:
+        print("Solver did not converge:", sol.message)
+    
+    t_c, t_d, z_c, z_d, p_d, w, L = sol.x
+    print("Converged:", sol.success, sol.message)
+    print("Solution vector [t_c, t_d, z_c, z_d, p_d, w, L] =")
+    print(sol.x)
+    print("Final residuals:", system_F(sol.x, params))
+    
+    # Recompute household allocations:
+    ell, c_house, d_house = household_allocation(params, p_d, w, L)
+    
+    print("\nHousehold solutions:")
+    for i in range(len(params['phi'])):
+        print(f"Household {i+1}: ell = {ell[i]:.4f}, c = {c_house[i]:.4f}, d = {d_house[i]:.4f}")
+    
+    # Firm outputs:
+    y_c = blocks.firm_c_production(t_c, z_c, params['epsilon_c'], params['r'], params['x'])
+    y_d = blocks.firm_d_production(t_d, z_d, params['epsilon_d'], params['r'], params['x'])
+    profit_c = params['p_c']*y_c - (w*t_c + params['tau_z']*z_c)
+    profit_d = p_d*y_d - (w*t_d + params['tau_z']*z_d)
+    
+    print(f"\nFirm outputs: y_c = {y_c:.4f}, y_d = {y_d:.4f}")
+    print(f"Firm profits: profit_c = {profit_c:.4f}, profit_d = {profit_d:.4f}")
+    
+    return sol, params
+
+if __name__ == "__main__":
+    solve_calibrated_corner()

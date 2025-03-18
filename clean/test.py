@@ -7,7 +7,6 @@ np.set_printoptions(suppress=True, precision=8)
 
 # 1. transform 
 def transform(u, params, n=5):
-
     d0 = params['d0']
     
     d_raw   = u[0:5]
@@ -28,7 +27,6 @@ def transform(u, params, n=5):
 
 # 3. construct full system
 def full_system(u, params, n=5):
-    
     d, ell, lam, t_c, t_d, z_c, z_d, p_d, w = transform(u, params, n)
     
     alpha = params['alpha']
@@ -40,7 +38,6 @@ def full_system(u, params, n=5):
     tau_z = params['tau_z']
     tau_w = params['tau_w']
     phi   = params['phi']
-    l_vec = params['l']
     t_total = params['t_total']
     eps_c = params['epsilon_c']
     eps_d = params['epsilon_d']
@@ -52,9 +49,11 @@ def full_system(u, params, n=5):
         tax_rev += tau_w[i]*phi[i]*w*(t_total-ell[i])
     tax_rev += (z_c + z_d)*tau_z
     
+    l_val = (tax_rev - G) / n # Lumpsum value
+    
     hh_eq = np.empty(3*n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*phi[i]*w*(t_total - ell[i]) + l_vec[i]*tax_rev
+        inc_i = (1.0 - tau_w[i])*phi[i]*w*(t_total - ell[i]) + l_val
         c_i = (inc_i - p_d*d[i]) / p_c  
         
         eq_c   = alpha/c_i - lam[i]*p_c
@@ -70,38 +69,36 @@ def full_system(u, params, n=5):
     
     y_d = blocks.firm_d_production(t_d, z_d, eps_d, r, x)
     eq_d_mkt = np.sum(d) + 0.5 - y_d + 0.5 * G/p_d
-    eq_l_mkt = np.sum(ell) + t_c + t_d - n*t_total
+    eq_l_mkt = np.sum(phi*(t_total-ell)) - (t_d+t_c)
     
     return np.concatenate((hh_eq, fc, fd, [eq_d_mkt, eq_l_mkt]))
 # end constructing full system
 
 # 3. solve system
-def solve(tau_w, tau_z, l_vec, G, n=5):
-    
+def solve(tau_w, tau_z, G, n=5):
     params = {
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.2,
+        'd0':        0.1,
         'x':         100.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,
         'epsilon_d': 0.92,
-        'r':         0.5,
+        'r':         -1.0,
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
-        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.5175*5]),
-        'l':         l_vec, 
+        'phi':       np.array([0.03, 0.0825, 0.141, 0.229, 0.5175]),
         't_total':   1.0, 
         'G':         G
     }
     
     u0 = np.zeros(21)
     u0[0:5]   = np.log(0.99)       # ln(d_i-d0)
-    u0[5:10]  = 0.0                # ell_i = 0.5
+    u0[5:10]  = 0.0                # ell_i ~ 0.5
     u0[10:15] = 1.0                # lambda_i = 1
-    u0[15]    = 0.0                # t_c => ~ n/2
-    u0[16]    = 0.0                # t_d => ~ n/2
+    u0[15]    = 0.0                # t_c
+    u0[16]    = 0.0                # t_d
     u0[17]    = 0.0                # ln(z_c)=0 => z_c=1
     u0[18]    = 0.0                # ln(z_d)=0 => z_d=1
     u0[19]    = 0.0                # ln(p_d)=0 => p_d=1
@@ -118,16 +115,13 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         tax_rev += tau_w[i]*params['phi'][i]*w*(params['t_total']-ell[i])
     tax_rev += (z_c + z_d)*tau_z
     
+    l_val = (tax_rev - G) / n
+    
     # Back out c_i for each household
     c = np.empty(n)
     for i in range(n):
-        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev
+        inc_i = (1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_val
         c[i] = (inc_i - p_d*d[i]) / params['p_c']
-    
-    # Compute budget errors for each household
-    budget_errors = np.empty(n)
-    for i in range(n):
-        budget_errors[i] = params['p_c']*c[i] + p_d*d[i] - ((1.0 - tau_w[i])*params['phi'][i]*w*(params['t_total'] - ell[i]) + l_vec[i]*tax_rev)
     
     # Compute household utilities: u_i = alpha*ln(c_i) + beta*ln(d_i-d0) + gamma*ln(ell_i)
     utilities = np.empty(n)
@@ -137,68 +131,45 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
     # Aggregate pollution:
     aggregate_polluting = z_d + z_c
     
-    # Compute firm outputs and profits
+    # (Firms' outputs and profits are computed below for information.)
     y_c = blocks.firm_c_production(t_c, z_c, params['epsilon_c'], params['r'], params['x'])
     y_d = blocks.firm_d_production(t_d, z_d, params['epsilon_d'], params['r'], params['x'])
     profit_c = params['p_c']*y_c - (w*t_c + tau_z*z_c)
     profit_d = p_d*y_d - (w*t_d + tau_z*z_d)
     
-    print("equilibirum:")
-    print("convergence ", sol.success)
-    print("solution message ", sol.message)
-    print("residual norm", resid_norm)
+    # Print equilibrium details (optional)
+    print("--------------------------------------------------")
+    print(f"Solving for tau_z = {tau_z:.4f}, G = {G:.4f}")
+    print("Convergence:", sol.success)
+    print("Residual norm:", resid_norm)
     print("")
     
-    print("hh solution:")
-    for i in range(n):
-        print(f"hh {i+1}:")
-        print(f"d: {d[i]:.4f}")
-        print(f"ell: {ell[i]:.4f}")
-        print(f"lambda: {lam[i]:.4f}")
-        print(f"c (backed out): {c[i]:.4f}")
-        print(f"budget error: {budget_errors[i]:.2e}")
-        print("")
-    
-    print("firm c:")
-    print(f"t: {t_c:.4f}")
-    print(f"z: {z_c:.4f}")
-    print(f"y: {y_c:.4f}")
-    print(f"pi: {profit_c:.4f}")
-    print("")
-    
-    print("firm d:")
-    print(f"t_d: {t_d:.4f}")
-    print(f"z_d: {z_d:.4f}")
-    print(f"y_d: {y_d:.4f}")
-    print(f"pi: {profit_d:.4f}")
-    print("")
-    
-    print("prices:")
-    print(f"p_d: {p_d:.4f}")
-    print(f"w:   {w:.4f}")
-    print("")
-    
-    print("final residuals:")
-    print(final_res)
-    
-    return utilities, aggregate_polluting, sol.success, c, d, ell, w, p_d, tax_rev, params
+    return utilities, aggregate_polluting, sol.success, c, d, ell, w, p_d, l_val, params, resid_norm
 # end solve system
 
-# 4. test
-
-n = 5
-tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
-l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-G = 1.0
-tau_z = 3.0
-utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, tax_rev, params = solve(tau_w_arr, tau_z, l_arr, G, n=n)
+# 4. loop over tau_z and G combinations
+if __name__ == "__main__":
+    n = 5
+    # Fixed tau_w for households (using your chosen values)
+    tau_w_arr = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
     
-print("returned Values:")
-print("utilities:", utilities)
-print("aggregate pollution:", aggregate_polluting)
-print("convergence:", first_converged)
-print("consumption:", c)
-print("dirty good consumption:", d)
-print("labor supply:", ell)
-print("tax revenue:", tax_rev)
-# end test
+    # Define grids for tau_z and G. Adjust these ranges and number of points as needed.
+    tau_z_values = np.linspace(0.01, 5.0, 20)
+    G_values = np.linspace(0.0, 5.0, 20)
+    
+    tol = 1e-6  # Tolerance for considering residuals as "zero"
+    valid_combinations = []
+    
+    for tau_z in tau_z_values:
+        for G in G_values:
+            # Solve the model for this combination.
+            utilities, agg_polluting, converged, c, d, ell, w, p_d, l_val, params, resid_norm = solve(tau_w_arr, tau_z, G, n=n)
+            
+            # Check if solution converged and the residual norm is below tolerance.
+            if converged and resid_norm < tol:
+                valid_combinations.append((tau_z, G, resid_norm))
+    
+    print("==================================================")
+    print("Found valid (tau_z, G) combinations with near-zero residuals:")
+    for combo in valid_combinations:
+        print(f"tau_z = {combo[0]:.4f}, G = {combo[1]:.4f}, Residual norm = {combo[2]:.2e}")

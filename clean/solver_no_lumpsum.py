@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 from scipy.optimize import root
-import blocks
+import clean.blocks as blocks
 
 np.set_printoptions(suppress=True, precision=8)
 
@@ -79,7 +79,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.1, # klenert calibrates to 0.5
+        'd0':        0.02, # klenert calibrates to 0.5
         'x':         100.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,
@@ -87,7 +87,7 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
         'r':         -1.0, # wrong before
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
-        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
+        'phi':       np.array([0.03, 0.0825, 0.141, 0.229, 0.511]),
         'l':         l_vec, 
         't_total':   1.0, 
         'G':         G
@@ -182,8 +182,8 @@ def solve(tau_w, tau_z, l_vec, G, n=5):
 n = 5
 tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
 l_arr = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-G = 1.0
-tau_z = 3.0
+G = 0.0
+tau_z = 2.
 utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d = solve(tau_w_arr, tau_z, l_arr, G, n=n)
     
 print("returned Values:")
