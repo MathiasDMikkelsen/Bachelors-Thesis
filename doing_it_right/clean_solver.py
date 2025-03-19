@@ -6,7 +6,7 @@ alpha     = 0.7
 beta      = 0.2
 gamma     = 0.2
 r         = -1.0
-T_val     = 100.0      # Time endowment per household
+T_val     = 1000.0      # Time endowment per household
 L         = 0.0      # Lump-sum transfers
 D0        = 1.5
 epsilon_C = 0.995    # Example value for Sector C
@@ -27,7 +27,7 @@ def system_eqns(x):
     F_D = (epsilon_D * (T_D**r) + (1 - epsilon_D) * (Z_D**r))**(1/r)
     
     D_agents = (beta/(p_D*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*T_val + L - p_D*D0) + D0
-    l_agents = (gamma/((alpha+beta+gamma)*phi*w))*(phi*w*(1-tau_w)*T_val + L - p_D*D0)
+    l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*T_val + L - p_D*D0)
 
     agg_labor = np.sum(phi*(T_val - l_agents))  
     agg_D = np.sum(D_agents)                     
@@ -43,7 +43,7 @@ def system_eqns(x):
     eq5 = w - epsilon_D * (T_D**(r-1)) * (F_D**(1-r)) * p_D
     eq6 = tau_z - (1 - epsilon_D) * (Z_D**(r-1)) * (F_D**(1-r)) * p_D
     
-    eq7 = (L-(np.sum(tau_w*w*phi*l_agents)+tau_z*(Z_C+Z_D)-G))/n
+    eq7 = n*L-(np.sum(tau_w*w*phi*l_agents)+tau_z*(Z_C+Z_D)-G)
 
     return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
 
@@ -68,9 +68,9 @@ print(f"Sector C output, F_C = {F_C:.4f}")
 print(f"Sector D output, F_D = {F_D:.4f}")
 
 # --- Compute Household-Level Demands and Aggregates ---
-C_agents = (alpha/(p_C*(alpha+beta+gamma)))*(phi*w*T_val + L - p_D*D0)
-D_agents = (beta/(p_D*(alpha+beta+gamma)))*(phi*w*T_val + L - p_D*D0) + D0
-l_agents = (gamma/((alpha+beta+gamma)*phi*w))*(phi*w*T_val + L - p_D*D0)
+C_agents = (alpha/(p_C*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*T_val + L - p_D*D0)
+D_agents = (beta/(p_D*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*T_val + L - p_D*D0) + D0
+l_agents = (gamma/((alpha+beta+gamma)*phi*(1-tau_w)*w))*(phi*w*(1-tau_w)*T_val + L - p_D*D0)
 
 print("\nHousehold Demands and Leisure:")
 for i in range(n):
@@ -100,4 +100,4 @@ labels = [
 
 print("\nResiduals (should be close to zero):")
 for label, res in zip(labels, residuals):
-    print(f"{label}: {res:.10f}")
+    print(f"{label}: {res:.15f}")
