@@ -10,7 +10,7 @@ xi = 10.0
 theta = 1.0
 n = 5
 G = 1.0
-phi = np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.5175*5])
+phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
 
 # 2. Objective Function (Social Welfare)
 def swf_obj(x):
@@ -40,7 +40,7 @@ def ic_constraints(x):
 
     # Parameters for utility
     alpha, beta, gamma = 0.7, 0.2, 0.2
-    d0 = 0.1
+    d0 = 0.5
     T = 1.0
     
     # Compute income measure I for each type:

@@ -12,7 +12,7 @@ n = 5                      # Number of households
 T_total = 1.0              # Total time endowment per household
 D0_val = 0.5             # Subsistence level for polluting consumption
 G_val = 0.0                # Relaxed government spending
-tau_z_val = 1.0         # Relaxed environmental tax on production
+tau_z_val = 10.0         # Relaxed environmental tax on production
 
 # --------------------------------------------------
 # Create the model
@@ -40,11 +40,11 @@ tau_w_data = {i: 0.0 for i in model.I}
 model.tau_w = Param(model.I, initialize=tau_w_data)
 # Productivity vector φ (as in the paper)
 phi_data = {
-    1: 0.03/0.9935,
-    2: 0.0825/0.9935,
-    3: 0.141/0.9935,
-    4: 0.229/0.9935,
-    5: 0.511/0.9935
+    1: 0.2,
+    2: 0.2,
+    3: 0.2,
+    4: 0.2,
+    5: 0.2
 }
 model.phi = Param(model.I, initialize=phi_data)
 model.t_total = Param(initialize=T_total)      # Total time endowment per household

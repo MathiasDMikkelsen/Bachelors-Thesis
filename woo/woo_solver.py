@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 from scipy.optimize import root
-import clean.blocks as blocks
+import blocks
 
 np.set_printoptions(suppress=True, precision=8)
 
@@ -71,7 +71,7 @@ def full_system(u, params, n=5):
     
     y_d = blocks.firm_d_production(t_d, z_d, eps_d, r, x)
     eq_d_mkt = np.sum(d) + 0.5 - y_d + 0.5 * G/p_d
-    eq_l_mkt = np.sum(ell) + t_c + t_d - n*t_total
+    eq_l_mkt = np.sum((1-ell)*phi) - (t_c + t_d)
     
     return np.concatenate((hh_eq, fc, fd, [eq_d_mkt, eq_l_mkt]))
 # end constructing full system
@@ -83,16 +83,16 @@ def solve(tau_w, tau_z, G, n=5):
         'alpha':     0.7,
         'beta':      0.2,
         'gamma':     0.2,
-        'd0':        0.1,
-        'x':         100.0,
+        'd0':        0.5,
+        'x':         0.0,
         'p_c':       1.0, 
         'epsilon_c': 0.995,
         'epsilon_d': 0.92,
         'r':         0.5,
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
-        'phi':       np.array([0.03*5, 0.0825*5, 0.141*5, 0.229*5, 0.511*5]),
-        't_total':   1.0, 
+        'phi':       np.array([0.03, 0.0825, 0.141, 0.229, 0.511]),
+        't_total':   100.0, 
         'G':         G
     }
     
@@ -190,7 +190,7 @@ def solve(tau_w, tau_z, G, n=5):
 if __name__ == "__main__":
     n = 5
     tau_w_arr = np.array([0.10, 0.12, 0.15, 0.30, 0.60])
-    G = 1.0
+    G = 0.0
     tau_z = 3.0
     utilities, aggregate_polluting, first_converged, c, d, ell, w, p_d, l_val, params = solve(tau_w_arr, tau_z, G, n=n)
         
