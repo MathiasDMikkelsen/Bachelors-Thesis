@@ -15,7 +15,7 @@ epsilon_D = 0.92      # Example value for Sector D
 p_C       = 1.0       # Numeraire
 
 # tau_z is a given parameter; we will vary it.
-tau_z = 0.03  # initial value, will be overwritten in loop
+tau_z = 1.0  # initial value, will be overwritten in loop
 
 # Household weights (for 5 households, each is set so that sum(phi)=1)
 # In your model these are given by:
@@ -64,7 +64,7 @@ def system_eqns(x):
 x0 = np.array([0.3, 0.4, 0.6, 0.4, 0.5, 1.5])
 
 # Define a range for tau_z to vary:
-tau_range = np.linspace(0.001, 0.05, 1000)
+tau_range = np.linspace(0.001, 1.0, 1000)
 
 # Prepare arrays to store solutions
 sol_array = np.empty((len(tau_range), 6))
