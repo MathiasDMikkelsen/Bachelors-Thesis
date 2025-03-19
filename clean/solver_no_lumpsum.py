@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 from scipy.optimize import root
-import clean.blocks as blocks
+import woo.blocks as blocks
 
 np.set_printoptions(suppress=True, precision=8)
 

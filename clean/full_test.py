@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
-import clean.blocks as blocks  # Assuming the blocks module is available with the required functions
+import woo.blocks as blocks  # Assuming the blocks module is available with the required functions
 
 np.set_printoptions(suppress=True, precision=8)
 
