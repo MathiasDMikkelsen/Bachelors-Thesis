@@ -92,7 +92,7 @@ def solve(tau_w, tau_z, G, n=5):
         'tau_z':     tau_z,
         'tau_w':     tau_w, 
         'phi':       np.array([0.03, 0.0825, 0.141, 0.229, 0.511]),
-        't_total':   100.0, 
+        't_total':   1000.0, 
         'G':         G
     }
     

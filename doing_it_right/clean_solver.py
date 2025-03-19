@@ -13,7 +13,7 @@ epsilon_C = 0.995    # Example value for Sector C
 epsilon_D = 0.92     # Example value for Sector D
 p_C       = 1.0      # Numeraire
 tau_z     = 1.0 
-G         = 5.0
+G         = 6.0
 
 
 phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
@@ -43,7 +43,7 @@ def system_eqns(x):
     eq5 = w - epsilon_D * (T_D**(r-1)) * (F_D**(1-r)) * p_D
     eq6 = tau_z - (1 - epsilon_D) * (Z_D**(r-1)) * (F_D**(1-r)) * p_D
     
-    eq7 = L-(np.sum(tau_w*w*phi*l_agents)+tau_z*(Z_C+Z_D)-G)
+    eq7 = (L-(np.sum(tau_w*w*phi*l_agents)+tau_z*(Z_C+Z_D)-G))/n
 
     return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
 
@@ -101,4 +101,3 @@ labels = [
 print("\nResiduals (should be close to zero):")
 for label, res in zip(labels, residuals):
     print(f"{label}: {res:.10f}")
-    
