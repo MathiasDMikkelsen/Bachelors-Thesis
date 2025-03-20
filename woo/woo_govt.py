@@ -1,116 +1,79 @@
 import numpy as np
 from scipy.optimize import minimize
-import matplotlib.pyplot as plt
-import woo_solver as solver
+from clean_inner import solve_and_return  # This file defines solve_and_return(tau_z, tau_w_input)
 
-np.set_printoptions(suppress=True, precision=8)
+# SWF parameters:
+xi = 0.1    # Penalty weight on aggregate pollution (Z_C+Z_D)
+n = 5       # Number of households
 
-# 1. Parameters
-xi = 10.0
-theta = 1.0
-n = 5
-G = 1.0
-phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
-
-# 2. Objective Function (Social Welfare)
-def swf_obj(x):
-    # Extract decision variables:
-    tau_w = x[0:n]
-    tau_z = x[n]
-    l = x[n+1:2*n+1]
+def objective_policy(policy):
+    """
+    Policy vector is 6-dimensional:
+      - first 5 entries: household-specific tau_w's,
+      - 6th entry: common tau_z.
+      
+    SWF is defined as:
+      SWF = sum_i U_i - 5*xi*(Z_C+Z_D)
+    where U_i = C_i^alpha + (D_i-D0)^beta + l_i^gamma.
     
-    # Solve the economic model:
-    utilities, agg_polluting, converged, c, d, ell, w, p_d, l_val, _ = solver.solve(tau_w, tau_z, G, n=n)
-    if not converged:
-        return 1e10  # Penalize non-convergence
-    
-    # Compute welfare:
-    welfare = np.sum(utilities) - xi * (agg_polluting**theta)
-    return -welfare  # Negative because we minimize
+    This function calls solve_and_return. If equilibrium fails or returns NaN,
+    it assigns a heavy penalty so that the optimizer avoids that region.
+    Returns -SWF (plus any penalty) for minimization.
+    """
+    tau_w_vec = np.array(policy[:n])
+    tau_z = policy[n]
+    sol_result = solve_and_return(tau_z, tau_w_vec)
+    if sol_result is None:
+        return 1e6  # heavy penalty if equilibrium doesn't converge
+    sum_util, sum_Z = sol_result
+    if np.isnan(sum_util) or np.isnan(sum_Z):
+        return 1e6
+    # Enforce nonnegative pollution
+    penalty = 0.0
+    if sum_Z < 0:
+        penalty += 1e6 + abs(sum_Z)*1e3
+    SWF = sum_util - n * xi * sum_Z
+    return -SWF + penalty
 
-# 3. Mirrlees IC Constraints
-def ic_constraints(x):
-    tau_w = x[0:n]
-    tau_z = x[n]
-    l = x[n+1:2*n+1]
-    
-    utilities, agg_polluting, converged, c, d, ell, w, p_d, l_val, _ = solver.solve(tau_w, tau_z, G, n=n)
-    if not converged:
-        return -np.ones(n*(n-1)) * 1e6  # Large negative penalty if not converged
+def constraint_sum_z(policy):
+    """
+    Nonlinear constraint: aggregate complementary input Z_C+Z_D must be >= 0.
+    """
+    tau_w_vec = np.array(policy[:n])
+    tau_z = policy[n]
+    sol_result = solve_and_return(tau_z, tau_w_vec)
+    if sol_result is None:
+        return -1e6
+    _, sum_Z = sol_result
+    return sum_Z
 
-    # Parameters for utility
-    alpha, beta, gamma = 0.7, 0.2, 0.2
-    d0 = 0.5
-    T = 1.0
-    
-    # Compute income measure I for each type:
-    I = np.zeros(n)
-    for j in range(n):
-        I[j] = (T - ell[j])*(1.0 - tau_w[j])*phi[j]*w + l_val
+# Initial guess for policy: for example, tau_w = [0,0,0,0,0] and tau_z = 1.0.
+initial_policy = np.concatenate((np.zeros(n), [1.0]))
 
-    g_list = []
-    for i in range(n):
-        U_i = utilities[i]
-        for j in range(n):
-            if i == j:
-                continue
-            
-            c_j = c[j]
-            d_j = d[j]
-            
-            denom = (1.0 - tau_w[j]) * phi[i] * w
-            if denom <= 0:
-                g_list.append(-1e6)
-                continue
-            
-            ell_i_j = T - I[j] / denom
-            if ell_i_j <= 0:
-                U_i_j = -1e6
-            else:
-                if c_j <= 0 or d_j <= d0:
-                    U_i_j = -1e6
-                else:
-                    U_i_j = (alpha * np.log(c_j) +
-                             beta * np.log(d_j - d0) +
-                             gamma * np.log(ell_i_j))
-            
-            # Constraint: U_i must be at least U_i_j
-            g_list.append(U_i - U_i_j)
-    
-    return np.array(g_list)
+# Bounds: each tau_w in (-5,5) and tau_z in (0.001, 0.5)
+bounds = [(-5, 5)] * n + [(0.5, 100.0)]
+constraints = [{'type': 'ineq', 'fun': constraint_sum_z}]
 
+# Use SLSQP optimizer
+res = minimize(objective_policy, x0=initial_policy, bounds=bounds,
+               constraints=constraints, method='SLSQP')
 
-# 5. Solve the Planner Problem
-# Since lump sum shares should not sum to 1, we choose an initial guess that does not sum to 1.
-initial_tau_w = [0.05] * n
-initial_tau_z = [3.0]
-initial_l = [0.2] * n   # Sum is 0, not 1
-initial_guess = np.array(initial_tau_w + initial_tau_z + initial_l)
+print("Optimization result:")
+print(res)
+optimal_policy = res.x
+opt_tau_w = optimal_policy[:n]
+opt_tau_z = optimal_policy[n]
+print("\nOptimal policy parameters:")
+for i in range(n):
+    print(f"tau_w[{i+1}] = {opt_tau_w[i]:.4f}")
+print(f"tau_z = {opt_tau_z:.4f}")
 
-# Define bounds for each variable:
-bounds = [(-2.0, 2.0)] * n + [(0.1, 100.0)] + [(-2.0, 2.0)] * n
-
-# For now we only enforce the government spending constraint; you can enable the IC constraints as needed.
-constraints = [
-    #{'type': 'eq', 'fun': gov_constraint},
-    {'type': 'ineq', 'fun': ic_constraints}  # Uncomment if you want to enforce IC constraints.
-]
-
-res = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
-
-# Output results
-if res.success:
-    opt_tau_w = res.x[0:n]
-    opt_tau_z = res.x[n]
-    opt_l = res.x[n+1:2*n+1]
-    max_welfare = -res.fun
-    print("Social Welfare Optimization Successful!")
-    print("Optimal tau_w:", opt_tau_w)
-    print("Optimal tau_z:", opt_tau_z)
-    print("Optimal lump-sum shares:", opt_l)
-    print("Maximized Social Welfare:", max_welfare)
-    print("Solver message:", res.message)
-else:
-    print("Optimization Failed!")
-    print("Solver message:", res.message)
-    
+# Finally, solve equilibrium at the optimal policy and print details:
+result = solve_and_return(opt_tau_z, opt_tau_w)
+if result is not None:
+    sum_util, sum_Z = result
+    SWF_opt = sum_util - n * xi * sum_Z
+    print("\nAt the optimal policy:")
+    print("Sum of household utilities =", sum_util)
+    print("Aggregate complementary input (Z_C+Z_D) =", sum_Z)
+    print("Optimal SWF =", SWF_opt)

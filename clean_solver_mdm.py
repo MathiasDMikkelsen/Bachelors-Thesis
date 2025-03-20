@@ -41,9 +41,10 @@ def system_eqns(x):
     eq4 = tau_z - (1 - epsilon_C) * (Z_C**(r-1)) * (F_C**(1-r))
     
     eq5 = w - epsilon_D * (T_D**(r-1)) * (F_D**(1-r)) * p_D
+    
     eq6 = tau_z - (1 - epsilon_D) * (Z_D**(r-1)) * (F_D**(1-r)) * p_D
     
-    eq7 = (n*L-(np.sum(tau_w*w*phi*l_agents)+tau_z*(Z_C+Z_D)-G))
+    eq7 = (w*np.sum(tau_w*phi*(T_val-l_agents))+tau_z*(Z_C+Z_D))-n*L-G
 
     return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
 
@@ -107,9 +108,9 @@ for label, res in zip(labels, residuals):
 print("\nHousehold Budget Constraints:")
 for i in range(n):
     income = phi[i]*w*(1-tau_w[i])*(T_val-l_agents[i]) + L
-    expenditure = p_C*C_agents[i] + p_D*D_agents[i]
+    expenditure = C_agents[i] + p_D*D_agents[i]
     budget_error = income - expenditure
     print(f"Household {i+1}: Income = {income:.4f}, Expenditure = {expenditure:.4f}, Error = {budget_error:.10f}")
 
 # --- Print Good C Market Clearing Residual ---
-print(f"\nGood C Market Clearing Residual: {(agg_C + 0.5*G) - F_C:.10f}")
+print(f"\nGood C Market Clearing Residual: {(agg_C + 0.5*G) - F_C:.15f}")
