@@ -6,7 +6,7 @@ alpha     = 0.7
 beta      = 0.2
 gamma     = 0.2
 r         = -1.0
-T_val     = 1000.0      # Time endowment per household
+T_val     = 100.0      # Time endowment per household
 D0        = 1.5
 epsilon_C = 0.995    # Example value for Sector C
 epsilon_D = 0.92     # Example value for Sector D
@@ -27,8 +27,15 @@ def solve(tau_w, tau_z, G):
         tuple: A tuple containing the solution vector, a dictionary of results, and a boolean indicating convergence.
     """
 
-    def system_eqns(x):
-        T_C, T_D, Z_C, Z_D, w, p_D, L = x
+    def system_eqns(x_transformed):
+        # Transform back to original variables
+        T_C = np.exp(x_transformed[0])
+        T_D = np.exp(x_transformed[1])
+        Z_C = np.exp(x_transformed[2])
+        Z_D = np.exp(x_transformed[3])
+        w = np.exp(x_transformed[4])
+        p_D = np.exp(x_transformed[5])
+        L = np.exp(x_transformed[6])
 
         F_C = (epsilon_C * (T_C**r) + (1 - epsilon_C) * (Z_C**r))**(1/r)
         F_D = (epsilon_D * (T_D**r) + (1 - epsilon_D) * (Z_D**r))**(1/r)
@@ -49,12 +56,14 @@ def solve(tau_w, tau_z, G):
 
         return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
 
-    x0 = np.array([0.3, 0.4, 0.6, 0.4, 0.5, 1.5, 0.1])
+    # Initial guess for transformed variables (log of original values)
+    initial_w = 0.8  # A plausible initial wage
+    x0_transformed = np.log(np.array([0.3, 0.4, 0.6, 0.4, initial_w, 1.5, 0.1]))
 
-    sol = root(system_eqns, x0, method='lm')
+    sol = root(system_eqns, x0_transformed, method='lm')
 
-    # Extract solution values
-    T_C, T_D, Z_C, Z_D, w, p_D, L = sol.x
+    # Extract solution values (transform back to original scale)
+    T_C, T_D, Z_C, Z_D, w, p_D, L = np.exp(sol.x)
 
     # Calculate additional results
     F_C = (epsilon_C * (T_C**r) + (1 - epsilon_C) * (Z_C**r))**(1/r)
