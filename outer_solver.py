@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import inner_solver as solver
 
 # Model parameters (consistent with inner_solver)
-xi = 10.0
+xi = 100.0
 theta = 1.0
 n = 5
 phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
@@ -51,7 +51,7 @@ def maximize_welfare(G):
             # Parameters for utility (consistent with inner_solver)
             alpha, beta, gamma = 0.7, 0.2, 0.2
             d0 = 1.5
-            T = 100.0  # Time endowment
+            T = 1000.0  # Time endowment
 
             # Compute income measure I for each type:
             I = np.zeros(n)
