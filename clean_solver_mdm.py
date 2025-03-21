@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import root
 
-# Global model parameters (from your LaTeX)
+# Global model parameters
 alpha     = 0.7
 beta      = 0.2
 gamma     = 0.2
