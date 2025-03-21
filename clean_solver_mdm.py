@@ -44,7 +44,7 @@ def system_eqns(x):
     
     eq6 = tau_z - (1 - epsilon_D) * (Z_D**(r-1)) * (F_D**(1-r)) * p_D
     
-    eq7 = (w*np.sum(tau_w*phi*(T_val-l_agents))+tau_z*(Z_C+Z_D))-n*L-G
+    eq7 = (n*L-(np.sum(tau_w*w*phi*(T_val-l_agents))+tau_z*(Z_C+Z_D)-G))
 
     return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
 
@@ -113,4 +113,4 @@ for i in range(n):
     print(f"Household {i+1}: Income = {income:.4f}, Expenditure = {expenditure:.4f}, Error = {budget_error:.10f}")
 
 # --- Print Good C Market Clearing Residual ---
-print(f"\nGood C Market Clearing Residual: {(agg_C + 0.5*G) - F_C:.15f}")
+print(f"\nGood C Market Clearing Residual: {(agg_C + 0.5*G) - F_C:.10f}")
