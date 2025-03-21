@@ -3,23 +3,11 @@ from scipy.optimize import minimize
 from clean_inner import solve_and_return  # This file defines solve_and_return(tau_z, tau_w_input)
 
 # SWF parameters:
-xi = 50.0    # Penalty weight on aggregate pollution (Z_C+Z_D)
+xi = 0.1    # Penalty weight on aggregate pollution (Z_C+Z_D)
 n = 5       # Number of households
 
 def objective_policy(policy):
-    """
-    Given a policy vector (length 6): 
-      - The first 5 entries are the household-specific tau_w's.
-      - The 6th entry is tau_z (common).
-    The social welfare function is defined as:
-    
-        SWF = sum_i U_i - 5 * xi * (Z_C + Z_D),
-        
-    where U_i = C_i^alpha + (D_i-D0)^beta + l_i^gamma.
-    
-    If the equilibrium does not converge or returns NaN, a large penalty is returned.
-    Returns -SWF (plus any penalty) for minimization.
-    """
+
     tau_w_vec = np.array(policy[:n])
     tau_z = policy[n]
     sol_result = solve_and_return(tau_z, tau_w_vec)
@@ -34,10 +22,7 @@ def objective_policy(policy):
     return -SWF
 
 def finite_diff_jac(fun, x, eps=1e-6):
-    """
-    Computes a finite-difference approximation to the gradient of fun at x.
-    Uses central differences.
-    """
+
     f0 = fun(x)
     grad = np.zeros_like(x)
     for i in range(len(x)):
@@ -69,10 +54,12 @@ def constraint_sum_z(policy):
 
 constraints = [{'type': 'ineq', 'fun': constraint_sum_z}]
 
+options={'verbose': 1, 'gtol': 1e-3, 'xtol': 1e-3, 'barrier_tol': 1e-3, 'maxiter': 1000}
+
 res = minimize(objective_policy, x0=initial_policy, bounds=bounds,
-               constraints=constraints, method='trust-constr',
+               constraints=constraints, method='SLSQP',
                jac=lambda x: finite_diff_jac(objective_policy, x),
-               options={'verbose': 1})
+               options=options)
 
 print("Optimization result:")
 print(res)
