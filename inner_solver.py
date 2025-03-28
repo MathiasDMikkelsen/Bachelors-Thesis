@@ -15,14 +15,7 @@ phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
 n = len(phi)
 
 def solve(tau_w, tau_z, G):
-    """
-    Solves the system of equations for the given tax rates and government spending.
-    In this version, we reparameterize Z_C and Z_D to ensure they are always positive
-    by solving for log_Z_C and log_Z_D.
-    
-    The decision vector for the system becomes:
-       [T_C, T_D, log_Z_C, log_Z_D, w, p_D, L]
-    """
+
     def system_eqns(y):
         # Unpack reparameterized variables:
         T_C, T_D, log_Z_C, log_Z_D, w, p_D, L = y
@@ -50,17 +43,14 @@ def solve(tau_w, tau_z, G):
     
         return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
     
-    # Provide an initial guess. Note we use np.log for the Z variables.
     y0 = np.array([0.3, 0.4, np.log(0.6), np.log(0.4), 0.5, 1.5, 0.1])
     
     sol = root(system_eqns, y0, method='lm')
     
-    # Unpack the solution and convert the log-values:
     T_C, T_D, log_Z_C, log_Z_D, w, p_D, L = sol.x
     Z_C = np.exp(log_Z_C)
     Z_D = np.exp(log_Z_D)
     
-    # Compute additional results
     F_C = (epsilon_C * (T_C**r) + (1 - epsilon_C) * (Z_C**r))**(1/r)
     F_D = (epsilon_D * (T_D**r) + (1 - epsilon_D) * (Z_D**r))**(1/r)
     
@@ -103,26 +93,26 @@ def solve(tau_w, tau_z, G):
 
 # Example usage:
 if __name__ == "__main__":
-    tau_w = np.array([-1.75, -0.5, 0.0, 0.2, 0.6])
-    tau_z = 1.25
+    tau_w = np.array([-1.75, -0.5, 0.0, 0.2, 0.6]) # klenert optimality
+    tau_z = 1.0
     G = 5.0
     
     solution, results, converged = solve(tau_w, tau_z, G)
     
-    print("Solution status:", results["sol"].status)
-    print("Solution message:", results["sol"].message)
-    print("Convergence:", converged)
-    print("Solution vector [T_C, T_D, log_Z_C, log_Z_D, w, p_D, L]:")
+    print("solution status:", results["sol"].status)
+    print("solution message:", results["sol"].message)
+    print("convergence:", converged)
+    print("solution vector [T_C, T_D, log_Z_C, log_Z_D, w, p_D, L]:")
     print(solution)
     
-    print("\nProduction Summary:")
-    print(f"Sector C: T_prod = {results['T_C']:.4f}, Z_C = {results['Z_C']:.4f}")
-    print(f"Sector D: T_prod = {results['T_D']:.4f}, Z_D = {results['Z_D']:.4f}")
+    print("\nproduction summary:")
+    print(f"sector C: T_prod = {results['T_C']:.4f}, Z_C = {results['Z_C']:.4f}")
+    print(f"sector D: T_prod = {results['T_D']:.4f}, Z_D = {results['Z_D']:.4f}")
     
-    print("\nHousehold Demands and Leisure:")
+    print("\nhousehold demands and leisure:")
     for i in range(n):
-        print(f"Household {i+1}: C = {results['C_agents'][i]:.4f}, D = {results['D_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
+        print(f"household {i+1}: C = {results['C_agents'][i]:.4f}, D = {results['D_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
     
-    print("\nHousehold Utilities:")
+    print("\nhousehold Utilities:")
     for i in range(n):
-        print(f"Household {i+1}: Utility = {results['utilities'][i]:.4f}")
+        print(f"household {i+1}: utility = {results['utilities'][i]:.4f}")

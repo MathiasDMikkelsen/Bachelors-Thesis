@@ -10,15 +10,9 @@ phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
 G = 5.0  # Initial value for government spending
 
 def maximize_welfare(G):
-    """
-    Maximizes social welfare by choosing optimal tax rates (tau_w, tau_z)
-    given government spending G, using the inner solver.
-    """
 
     def swf_obj(x):
-        """
-        Objective function: Negative of social welfare.
-        """
+
         tau_w = x[0:n]
         tau_z = x[n]
 
@@ -37,9 +31,7 @@ def maximize_welfare(G):
             return 1e10  # Return a large penalty value
 
     def ic_constraints(x):
-        """
-        Implements the Mirrlees IC constraints.
-        """
+  
         tau_w = x[0:n]
         tau_z = x[n]
 
@@ -97,7 +89,8 @@ def maximize_welfare(G):
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
     # Initial guess for tax rates
-    initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5]
+    #initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5]
+    initial_tau_w = [(0.0)]*n # INITIAL GUESSES DO NOT MATTER! KLENERT GO HOME!!!!!!!!!
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
@@ -112,14 +105,14 @@ def maximize_welfare(G):
         opt_tau_z = result.x[n]
         max_welfare = -result.fun
 
-        print("Social Welfare Maximization Successful!")
-        print("Optimal tau_w:", opt_tau_w)
-        print("Optimal tau_z:", opt_tau_z)
-        print("Maximized Social Welfare:", max_welfare)
+        print("social welfare maximization successful")
+        print("optimal tau_w:", opt_tau_w)
+        print("optimal tau_z:", opt_tau_z)
+        print("maximized Social Welfare:", max_welfare)
         return opt_tau_w, opt_tau_z, max_welfare
     else:
-        print("Optimization Failed!")
-        print("Message:", result.message)
+        print("optimization failed")
+        print("message:", result.message)
         return None, None, None
 
 # Example usage:
@@ -127,42 +120,42 @@ if __name__ == "__main__":
     optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G)
 
     if optimal_tau_w is not None:
-        print("\nDetailed Results at Optimal Tax Rates:")
+        print("\nresults at optimal tax rates:")
         solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G)
 
         if converged:
-            print("Solution status:", results["sol"].status)
-            print("Solution message:", results["sol"].message)
-            print("Solution vector [T_C, T_D, Z_C, Z_D, w, p_D, L]:")
+            print("solution status:", results["sol"].status)
+            print("solution message:", results["sol"].message)
+            print("solution vector [T_C, T_D, Z_C, Z_D, w, p_D, L]:")
             print(solution)
 
-            print("\nProduction Summary:")
-            print(f"Sector C: T_prod = {results['T_C']:.4f}, Z_C = {results['Z_C']:.4f}")
-            print(f"Sector D: T_prod = {results['T_D']:.4f}, Z_D = {results['Z_D']:.4f}")
-            print(f"Common wage, w = {results['w']:.4f}, p_D = {results['p_D']:.4f}")
-            print(f"Sector C output, F_C = {results['F_C']:.4f}")
-            print(f"Sector D output, F_D = {results['F_D']:.4f}")
+            print("\nproduction Summary:")
+            print(f"sector C: T_prod = {results['T_C']:.4f}, Z_C = {results['Z_C']:.4f}")
+            print(f"sector D: T_prod = {results['T_D']:.4f}, Z_D = {results['Z_D']:.4f}")
+            print(f"common wage, w = {results['w']:.4f}, p_D = {results['p_D']:.4f}")
+            print(f"sector C output, F_C = {results['F_C']:.4f}")
+            print(f"sector D output, F_D = {results['F_D']:.4f}")
 
-            print("\nHousehold Demands and Leisure:")
+            print("\nhousehold Demands and Leisure:")
             for i in range(n):
-                print(f"Household {i+1}: C = {results['C_agents'][i]:.4f}, D = {results['D_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
+                print(f"household {i+1}: C = {results['C_agents'][i]:.4f}, D = {results['D_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
 
-            print("\nAggregated Quantities:")
-            print(f"Aggregate C = {results['agg_C']:.4f}")
-            print(f"Aggregate D = {results['agg_D']:.4f}")
-            print(f"Labor supply = {results['agg_labor']:.4f}")
+            print("\naggregated Quantities:")
+            print(f"aggregate C = {results['agg_C']:.4f}")
+            print(f"aggregate D = {results['agg_D']:.4f}")
+            print(f"labor supply = {results['agg_labor']:.4f}")
 
-            print("\nLump sum:")
+            print("\nlump sum:")
             print(f"L = {results['L']:.4f}")
 
-            print("\nFirm Profits:")
-            print(f"Profit Sector C: {results['profit_C']:.4f}")
-            print(f"Profit Sector D: {results['profit_D']:.4f}")
+            print("\nfirm profits:")
+            print(f"profit Sector C: {results['profit_C']:.4f}")
+            print(f"profit Sector D: {results['profit_D']:.4f}")
 
-            print("\nHousehold Budget Constraints:")
+            print("\nhousehold budget constraints:")
             for i in range(n):
-                print(f"Household {i+1}: Error = {results['budget_errors'][i]:.10f}")
+                print(f"household {i+1}: error = {results['budget_errors'][i]:.10f}")
 
-            print(f"\nGood C Market Clearing Residual: {(results['agg_C'] + 0.5*G) - results['F_C']:.10f}")
+            print(f"\ngood C market clearing residual: {(results['agg_C'] + 0.5*G) - results['F_C']:.10f}")
         else:
-            print("Inner solver did not converge at optimal tax rates.")
+            print("inner solver did not converge at optimal tax rates")
