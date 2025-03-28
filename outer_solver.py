@@ -97,7 +97,7 @@ def maximize_welfare(G):
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
     # Initial guess for tax rates
-    initial_tau_w = [0.1] * n
+    initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5]
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
