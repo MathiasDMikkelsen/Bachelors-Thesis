@@ -105,7 +105,7 @@ def maximize_welfare(G):
     bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
 
     # Optimization using trust-constr
-    result = minimize(swf_obj, initial_guess, method='trust-constr', bounds=bounds, constraints=[nonlinear_constraint])
+    result = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=[nonlinear_constraint])
 
     if result.success:
         opt_tau_w = result.x[0:n]
