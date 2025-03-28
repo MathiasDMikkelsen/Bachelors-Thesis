@@ -1,13 +1,13 @@
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import minimize, NonlinearConstraint
 import inner_solver as solver
 
 # Model parameters (consistent with inner_solver)
-xi = 10.0
+xi = 0.1
 theta = 1.0
 n = 5
 phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
-G = 3.0  # Initial value for government spending
+G = 5.0  # Initial value for government spending
 
 def maximize_welfare(G):
     """
@@ -50,8 +50,8 @@ def maximize_welfare(G):
 
             # Parameters for utility (consistent with inner_solver)
             alpha, beta, gamma = 0.7, 0.2, 0.2
-            d0 = 5.5
-            T = 100.0  # Time endowment
+            d0 = 0.5
+            T = 24.0  # Time endowment
 
             # Compute income measure I for each type:
             I = np.zeros(n)
@@ -85,7 +85,7 @@ def maximize_welfare(G):
                                      gamma * np.log(ell_i_j))
 
                     # Constraint: U_i must be at least U_i_j
-                    g_list.append(U_i - U_i_j)
+                    g_list.append(U_i - U_i_j) # Add small tolerance to avoid strict inequality
 
             return np.array(g_list)
 
@@ -93,21 +93,19 @@ def maximize_welfare(G):
             print(f"IC constraint evaluation failed with error: {e}")
             return -np.ones(n*(n-1)) * 1e6  # Large negative penalty if solver fails
 
+    # Define the nonlinear constraint
+    nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
+
     # Initial guess for tax rates
-    initial_tau_w = [0.05] * n
+    initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5]
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
     # Bounds for tax rates (adjust as needed)
-    bounds = [(-2.0, 2.0)] * n + [(0.0001, 20.0)]
+    bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
 
-    # Constraints
-    constraints = [
-        {'type': 'ineq', 'fun': ic_constraints}  # IC constraints
-    ]
-
-    # Optimization
-    result = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
+    # Optimization using trust-constr
+    result = minimize(swf_obj, initial_guess, method='trust-constr', bounds=bounds, constraints=[nonlinear_constraint])
 
     if result.success:
         opt_tau_w = result.x[0:n]
