@@ -1,16 +1,18 @@
 import numpy as np
 from scipy.optimize import minimize, NonlinearConstraint
 import inner_solver as solver
+from inner_solver import alpha, beta, gamma, d0, phi, n
 
-# Model parameters (consistent with inner_solver)
+# a. parameters
+T = 24
 xi = 0.1
 theta = 1.0
-n = 5
-phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
-G = 5.0  # Initial value for government spending
+G = 5.0 
 
+# b. maximize social welfare
 def maximize_welfare(G):
 
+    # b1. define objective function
     def swf_obj(x):
 
         tau_w = x[0:n]
@@ -19,17 +21,19 @@ def maximize_welfare(G):
         try:
             solution, results, converged = solver.solve(tau_w, tau_z, G)
             if not converged:
-                return 1e10  # Penalize non-convergence
+                return 1e10  # penalize inner layer non-convergence
 
-            # Extract relevant variables for welfare calculation
-            utilities = results['utilities']  # Use the utilities from inner_solver
-            agg_polluting = results['Z_C'] + results['Z_D']
+            utilities = results['utilities']  
+            agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
+            
             welfare = np.sum(utilities) - xi * (agg_polluting**theta)
-            return -welfare  # Minimize the negative of welfare
+            return -welfare  # calculate and return negative welfare
+        
         except Exception as e:
             print(f"Solver failed with error: {e}")
-            return 1e10  # Return a large penalty value
+            return 1e10  # penalize inner layer failiure
 
+    # b2. define ic constraints
     def ic_constraints(x):
   
         tau_w = x[0:n]
@@ -38,68 +42,63 @@ def maximize_welfare(G):
         try:
             solution, results, converged = solver.solve(tau_w, tau_z, G)
             if not converged:
-                return -np.ones(n*(n-1)) * 1e6  # Large negative penalty if not converged
+                return -np.ones(n*(n-1)) * 1e6  # penalize inner layer non-convergence
 
-            # Parameters for utility (consistent with inner_solver)
-            alpha, beta, gamma = 0.7, 0.2, 0.2
-            d0 = 0.5
-            T = 24.0  # Time endowment
-
-            # Compute income measure I for each type:
             I = np.zeros(n)
             for j in range(n):
-                I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] + results['L']
+                I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] + results['l'] # compute income for hh j
 
             g_list = []
+            
             for i in range(n):
                 U_i = results['utilities'][i]
                 for j in range(n):
                     if i == j:
                         continue
 
-                    c_j = results['C_agents'][j]
-                    d_j = results['D_agents'][j]
+                    c_j = results['c_agents'][j]
+                    d_j = results['d_agents'][j] # retrieve consumption for hh j
 
                     denom = (1.0 - tau_w[j]) * phi[i] * results['w']
-                    if denom <= 0:
+                    if denom == 0: # ial: changed from "<=0" to only avoid division by zero
                         g_list.append(-1e6)
-                        continue
+                        continue  
 
-                    ell_i_j = T - I[j] / denom
+                    ell_i_j = T - I[j] / denom # comute leisure for hh i pretending to be hh j
+                    
                     if ell_i_j <= 0:
-                        U_i_j = -1e6
+                        U_i_j = -1e6 # throw away corner solutions
                     else:
                         if c_j <= 0 or d_j <= d0:
-                            U_i_j = -1e6
+                            U_i_j = -1e6 # throw away corner solutions
                         else:
                             U_i_j = (alpha * np.log(c_j) +
                                      beta * np.log(d_j - d0) +
-                                     gamma * np.log(ell_i_j))
+                                     gamma * np.log(ell_i_j)) # calculate utility for hh i pretending to be hh j
 
-                    # Constraint: U_i must be at least U_i_j
-                    g_list.append(U_i - U_i_j) # Add small tolerance to avoid strict inequality
+                    g_list.append(U_i - U_i_j) # return two ic constraints for each pair of hh
 
             return np.array(g_list)
 
         except Exception as e:
-            print(f"IC constraint evaluation failed with error: {e}")
-            return -np.ones(n*(n-1)) * 1e6  # Large negative penalty if solver fails
+            print(f"ic constraint evaluation failed with error: {e}")
+            return -np.ones(n*(n-1)) * 1e6  # penzlize if ic constraints cannot be evaluated
 
-    # Define the nonlinear constraint
-    nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
+    # b3. define ic constraints as a nonlinear constraint
+    nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf) 
 
-    # Initial guess for tax rates
-    #initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5]
-    initial_tau_w = [(0.0)]*n # INITIAL GUESSES DO NOT MATTER! KLENERT GO HOME!!!!!!!!!
+    # b4. initial guess. 
+    initial_tau_w = [(0.0)]*n # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
-    # Bounds for tax rates (adjust as needed)
+    # b5. bounds for tax rates
     bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
 
-    # Optimization using trust-constr
+    # b6. minimize negative welfare using slsqp
     result = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=[nonlinear_constraint])
 
+    # b7. print results
     if result.success:
         opt_tau_w = result.x[0:n]
         opt_tau_z = result.x[n]
@@ -115,47 +114,46 @@ def maximize_welfare(G):
         print("message:", result.message)
         return None, None, None
 
-# Example usage:
-if __name__ == "__main__":
-    optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G)
+# c. run optimization
+optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G)
 
-    if optimal_tau_w is not None:
-        print("\nresults at optimal tax rates:")
-        solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G)
+if optimal_tau_w is not None:
+    print("\nresults at optimal tax rates:")
+    solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G)
 
-        if converged:
-            print("solution status:", results["sol"].status)
-            print("solution message:", results["sol"].message)
-            print("solution vector [T_C, T_D, Z_C, Z_D, w, p_D, L]:")
-            print(solution)
+    if converged:
+        print("solution status:", results["sol"].status)
+        print("solution message:", results["sol"].message)
+        print("solution vector [T_C, T_D, Z_C, Z_D, w, p_D, L]:")
+        print(solution)
 
-            print("\nproduction Summary:")
-            print(f"sector C: T_prod = {results['T_C']:.4f}, Z_C = {results['Z_C']:.4f}")
-            print(f"sector D: T_prod = {results['T_D']:.4f}, Z_D = {results['Z_D']:.4f}")
-            print(f"common wage, w = {results['w']:.4f}, p_D = {results['p_D']:.4f}")
-            print(f"sector C output, F_C = {results['F_C']:.4f}")
-            print(f"sector D output, F_D = {results['F_D']:.4f}")
+        print("\nproduction Summary:")
+        print(f"sector C: T_prod = {results['t_c']:.4f}, z_c = {results['z_c']:.4f}")
+        print(f"sector D: T_prod = {results['t_d']:.4f}, z_d = {results['z_d']:.4f}")
+        print(f"common wage, w = {results['w']:.4f}, p_D = {results['p_d']:.4f}")
+        print(f"sector C output, F_C = {results['f_c']:.4f}")
+        print(f"sector D output, F_D = {results['f_c']:.4f}")
 
-            print("\nhousehold Demands and Leisure:")
-            for i in range(n):
-                print(f"household {i+1}: C = {results['C_agents'][i]:.4f}, D = {results['D_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
+        print("\nhousehold Demands and Leisure:")
+        for i in range(n):
+            print(f"household {i+1}: c = {results['c_agents'][i]:.4f}, D = {results['d_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
 
-            print("\naggregated Quantities:")
-            print(f"aggregate C = {results['agg_C']:.4f}")
-            print(f"aggregate D = {results['agg_D']:.4f}")
-            print(f"labor supply = {results['agg_labor']:.4f}")
+        print("\naggregated Quantities:")
+        print(f"aggregate c = {results['agg_c']:.4f}")
+        print(f"aggregate d = {results['agg_d']:.4f}")
+        print(f"aggregate labor supply = {results['agg_labor']:.4f}")
 
-            print("\nlump sum:")
-            print(f"L = {results['L']:.4f}")
+        print("\nlump sum:")
+        print(f"l = {results['l']:.4f}")
 
-            print("\nfirm profits:")
-            print(f"profit Sector C: {results['profit_C']:.4f}")
-            print(f"profit Sector D: {results['profit_D']:.4f}")
+        print("\nfirm profits:")
+        print(f"profit c: {results['profit_c']:.4f}")
+        print(f"profit d: {results['profit_d']:.4f}")
 
-            print("\nhousehold budget constraints:")
-            for i in range(n):
-                print(f"household {i+1}: error = {results['budget_errors'][i]:.10f}")
+        print("\nhousehold budget constraints:")
+        for i in range(n):
+            print(f"household {i+1}: error = {results['budget_errors'][i]:.10f}")
 
-            print(f"\ngood C market clearing residual: {(results['agg_C'] + 0.5*G) - results['F_C']:.10f}")
-        else:
-            print("inner solver did not converge at optimal tax rates")
+        print(f"\ngood c market clearing residual: {(results['agg_c'] + 0.5*G) - results['f_c']:.10f}")
+    else:
+        print("inner solver did not converge at optimal tax rates")
