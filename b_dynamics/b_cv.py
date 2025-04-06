@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from inner_solver import solve
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from a_solvers.inner_solver import solve
 
 # a. calibration
 alpha     = 0.7
@@ -60,7 +65,7 @@ for j, tau_z in enumerate(tau_z_values):
         rel_CV_array[i, j] = CV_array[i, j] / income_base[i]
 
 # h. plot
-plt.figure(figsize=(7, 5))
+plt.figure(figsize=(5, 3.5))
 for i in range(n):
     plt.plot(tau_z_values, rel_CV_array[i, :],
              label=f'$i={i+1}$', linestyle='-')
@@ -68,7 +73,5 @@ plt.xlabel(r'$\tau_z$', fontsize=14)
 plt.ylabel(r'$\frac{CV_i}{m^d_i}$', fontsize=14)
 plt.legend()
 plt.tight_layout()
-plt.savefig("relative_cv.pdf")
+plt.savefig("b_dynamics/b_cv.pdf")
 plt.show()
-
-# i. compensate wage

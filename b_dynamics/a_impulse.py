@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from inner_solver import solve
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from a_solvers.inner_solver import solve
 
 # a. set policy
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
@@ -30,36 +35,36 @@ for tau_z in tau_z_values:
 # e. plot
 fig, axs = plt.subplots(2, 3, figsize=(8, 4)) 
 
-# e1. subplot 1
+# e1. subplot 1: t_c vs. tau_z
 axs[0, 0].plot(tau_z_values, t_c_values, color="blue")
 axs[0, 0].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[0, 0].set_ylabel(r'$t_c$', fontsize=8)
 
-# e2. subplot 2
+# e2. subplot 2: t_d vs. tau_z
 axs[0, 1].plot(tau_z_values, t_d_values, color="orange")
 axs[0, 1].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[0, 1].set_ylabel(r'$t_d$', fontsize=8)
 
-# e3. subplot 3
+# e3. subplot 3: z_c vs. tau_z
 axs[0, 2].plot(tau_z_values, z_c_values, color="green")
 axs[0, 2].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[0, 2].set_ylabel(r'$z_c$', fontsize=8)
 
-# e4. subplot 4
+# e4. subplot 4: z_d vs. tau_z
 axs[1, 0].plot(tau_z_values, z_d_values, color="red")
 axs[1, 0].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[1, 0].set_ylabel(r'$z_d$', fontsize=8)
 
-# e5. subplot 5
+# e5. subplot 5: p_d vs. tau_z
 axs[1, 1].plot(tau_z_values, p_d_values, color="purple")
 axs[1, 1].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[1, 1].set_ylabel(r'$p_d$', fontsize=8)
 
-# e6. subplot 6
+# e6. subplot 6: w vs. tau_z
 axs[1, 2].plot(tau_z_values, w_values, color="brown")
 axs[1, 2].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[1, 2].set_ylabel(r'$w$', fontsize=8)
 
 plt.tight_layout()
-plt.savefig("a_impulse_resp.pdf")
+plt.savefig("b_dynamics/a_impulse.pdf")
 plt.show()
