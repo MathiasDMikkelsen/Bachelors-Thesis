@@ -7,8 +7,8 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 from a_solvers.inner_solver import solve, phi, t, n, tau_w
 
-tau_w = np.array([0] * n)
-g = 0.0
+tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
+g = 5.0
 tau_z_values = np.linspace(0.1, 3.0, 50)
 
 # --- Baseline Equilibrium (tau_z_baseline = 0.1) ---
@@ -57,7 +57,7 @@ relative_drop_const = (income_new_const-income_baseline.reshape(-1, 1)) / income
 relative_drop_update = (income_new_update-income_baseline.reshape(-1, 1)) / income_baseline.reshape(-1, 1)
 
 # --- Plot side-by-side subplots ---
-fig, axes = plt.subplots(1, 2, figsize=(11, 5.5))
+fig, axes = plt.subplots(1, 2, figsize=(8, 4))
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
 
 # Left subplot: Leisure Held Constant
@@ -69,7 +69,7 @@ for i in range(n):
 ax.set_xlabel(r'$\tau_z$', fontsize=12)
 ax.set_ylabel(r'relative $m^d_i+l$ drop', fontsize=12)
 ax.set_title(r'$\ell_i$ constant', fontsize=12)
-ax.legend(fontsize=10, loc='upper right')
+ax.legend(fontsize=12, loc='upper right')
 
 # Right subplot: Updated Leisure Outcomes
 ax = axes[1]
@@ -79,7 +79,7 @@ for i in range(n):
             label=f'$i=${i+1}')
 ax.set_xlabel(r'$\tau_z$', fontsize=12)
 ax.set_title('$\ell_i$ changes', fontsize=12)
-ax.legend(fontsize=10, loc='upper right')
+ax.legend(fontsize=12, loc='upper right')
 
 plt.tight_layout()
 plt.savefig("b_dynamics/c_income.pdf")
