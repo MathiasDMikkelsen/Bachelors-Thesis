@@ -6,7 +6,7 @@ tau_w = np.array([0.1, 0.12, 0.15, 0.18, 0.2])
 g = 5.0
 
 # b. Create a range of tau_z values
-tau_z_values = np.linspace(0.1, 3.0, 50)
+tau_z_values = np.linspace(0.1, 3.0, 100)
 
 # c. Track failures
 failed_tau_z = []
