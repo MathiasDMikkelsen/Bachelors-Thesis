@@ -91,7 +91,7 @@ def solve(tau_w, tau_z, g):
     return sol.x, results, sol.success
 
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24]) 
-tau_z = 1.0
+tau_z = 0.1
 g = 5.0
     
 solution, results, converged = solve(tau_w, tau_z, g)

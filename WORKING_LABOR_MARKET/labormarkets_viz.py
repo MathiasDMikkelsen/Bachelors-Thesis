@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from inner_labormarkets import solve  # assuming the new model is saved in this file
+from WORKING_LABOR_MARKET.inner_labormarkets import solve  # assuming the new model is saved in this file
 
 # a. set policy
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 g = 5.0
 
 # b. range for tau_z
-tau_z_values = np.linspace(0.1, 3.0, 50)
+tau_z_values = np.linspace(0.01, 2.0, 50)
 
 # c. lists to store results
 t_c_values = []

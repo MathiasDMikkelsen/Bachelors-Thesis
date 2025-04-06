@@ -1,5 +1,5 @@
 import numpy as np
-from inner_labormarkets import solve  # Make sure inner_solver.py contains the updated solve function
+from WORKING_LABOR_MARKET.inner_labormarkets import solve  # Make sure inner_solver.py contains the updated solve function
 
 # a. Set fiscal parameters
 tau_w = np.array([0.1, 0.12, 0.15, 0.18, 0.2])
