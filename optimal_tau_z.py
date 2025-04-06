@@ -2,25 +2,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 import inner_solver as solver
-from inner_solver import n, phi
+from inner_solver import n, phi, t  # t is assumed defined in inner_solver
 
 # Parameters for the outer objective
-G = 5.0           # Lump-sum (or other transfer) remains fixed
-theta = 1.0       # degree of pollution disutility
-# xi will be the parameter over which we vary in this analysis.
+G = 5.0           # Fixed lump-sum component in the model
+theta = 1.0       # Degree of pollution disutility
 
-# We hold tau_w constant (all zeros)
+# We hold tau_w constant (given values)
 tau_w_const = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 
 def swf_for_tau_z(tau_z, xi):
     """
-    For a given tau_z and xi, solve the inner equilibrium (with tau_w=0 and G fixed)
+    For a given tau_z and xi, solve the inner equilibrium (with fixed tau_w and G)
     and calculate social welfare as:
     
         SWF = sum_i U_i - xi*(z_c + z_d)^theta
-    
-    where U_i are the household utilities (returned in results['utilities']),
-    and z_c, z_d are computed in inner_solver.
     
     If the inner solver does not converge, return a large penalty.
     """
@@ -34,12 +30,10 @@ def swf_for_tau_z(tau_z, xi):
     return welfare
 
 def objective_tau_z(x, xi):
-
     tau_z = x[0]
     return -swf_for_tau_z(tau_z, xi)
 
 def find_optimal_tau_z(xi):
-
     x0 = np.array([0.5])
     bounds = [(0.1, 30.0)]
     res = minimize(objective_tau_z, x0, args=(xi,), method='SLSQP', bounds=bounds)
@@ -49,20 +43,57 @@ def find_optimal_tau_z(xi):
         print(f"Optimization failed for xi = {xi:.2f}: {res.message}")
         return np.nan
 
-
+# --- Vary xi and compute optimal tau_z ---
 xi_values = np.linspace(0.1, 10.0, 100)
 optimal_tau_z_array = np.zeros_like(xi_values)
 
-for idx, xi in enumerate(xi_values):
-    optimal_tau_z_array[idx] = find_optimal_tau_z(xi)
-    print(f"xi = {xi:.2f}, optimal tau_z = {optimal_tau_z_array[idx]:.4f}")
+# Prepare arrays for government revenue and lump-sum transfer.
+gov_revenue_array = np.zeros_like(xi_values)
+lump_sum_array = np.zeros_like(xi_values)   # Will be computed per xi
 
-# --- Plot optimal tau_z as a function of xi ---
-plt.figure(figsize=(8,6))
-plt.plot(xi_values, optimal_tau_z_array, 'b-', linewidth=2)
-plt.xlabel(r'$\xi$', fontsize=14)
-plt.ylabel(r'Optimal $\tau_z$', fontsize=14)
-plt.title(r'Optimal $\tau_z$ as a Function of $\xi$', fontsize=16)
+for idx, xi in enumerate(xi_values):
+    tau_z_opt = find_optimal_tau_z(xi)
+    optimal_tau_z_array[idx] = tau_z_opt
+    print(f"xi = {xi:.2f}, optimal tau_z = {tau_z_opt:.4f}")
+    
+    # Evaluate the inner solver at the optimal tau_z
+    sol, res, conv = solver.solve(tau_w_const, tau_z_opt, G)
+    if conv:
+        # Compute total government revenue:
+        # revenue = sum(tau_w_const * w * phi*(t - l_agents)) + tau_z_opt*(z_c+z_d)
+        l_agents = res.get('l_agents', np.full(n, t))
+        revenue = np.sum(tau_w_const * res["w"] * phi * (t - l_agents)) \
+                  + tau_z_opt * (res.get("z_c", 0) + res.get("z_d", 0))
+        gov_revenue_array[idx] = revenue
+        
+        # Compute lump-sum transfer as: tax revenue from environment minus G:
+        lump_sum = tau_z_opt * (res.get("z_c", 0) + res.get("z_d", 0)) - G
+        lump_sum_array[idx] = lump_sum
+    else:
+        gov_revenue_array[idx] = np.nan
+        lump_sum_array[idx] = np.nan
+
+# --- Plotting: 1 row, 3 columns ---
+fig, axs = plt.subplots(1, 3, figsize=(16, 5))
+
+# Left subplot: Optimal tau_z vs. xi
+axs[0].plot(xi_values, optimal_tau_z_array, 'b-', linewidth=2)
+axs[0].set_xlabel(r'$\xi$', fontsize=12)
+axs[0].set_ylabel(r'Optimal $\tau_z$', fontsize=12)
+axs[0].set_title(r'Optimal $\tau_z$ vs. $\xi$', fontsize=14)
+
+# Middle subplot: Total Government Revenue vs. xi
+axs[1].plot(xi_values, gov_revenue_array, 'g-', linewidth=2)
+axs[1].set_xlabel(r'$\xi$', fontsize=12)
+axs[1].set_ylabel('Total Government Revenue', fontsize=12)
+axs[1].set_title(r'Gov. Revenue vs. $\xi$', fontsize=14)
+
+# Right subplot: Lump-Sum Transfer vs. xi
+axs[2].plot(xi_values, lump_sum_array, 'r-', linewidth=2)
+axs[2].set_xlabel(r'$\xi$', fontsize=12)
+axs[2].set_ylabel('Lump-Sum Transfer', fontsize=12)
+axs[2].set_title(r'Lump-Sum vs. $\xi$', fontsize=14)
+
 plt.tight_layout()
-plt.savefig("optimal_tau_z_vs_xi_no_ic.pdf")
+plt.savefig("optimal_tau_z_government_revenue_lumpsum.pdf")
 plt.show()

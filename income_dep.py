@@ -48,11 +48,11 @@ for j, tau_z in enumerate(tau_z_values):
                                        (t - l_agents_new[i]) + l_new)
 
 # Compute relative drop in disposable income: (m_base - m_new) / m_base.
-relative_drop_const = (income_baseline.reshape(-1, 1) - income_new_const) / income_baseline.reshape(-1, 1)
-relative_drop_update = (income_baseline.reshape(-1, 1) - income_new_update) / income_baseline.reshape(-1, 1)
+relative_drop_const = (income_new_const-income_baseline.reshape(-1, 1)) / income_baseline.reshape(-1, 1)
+relative_drop_update = (income_new_update-income_baseline.reshape(-1, 1)) / income_baseline.reshape(-1, 1)
 
 # --- Plot side-by-side subplots ---
-fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+fig, axes = plt.subplots(1, 2, figsize=(11, 5.5))
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
 
 # Left subplot: Leisure Held Constant
@@ -60,21 +60,21 @@ ax = axes[0]
 for i in range(n):
     ax.plot(tau_z_values, relative_drop_const[i, :],
             color=colors[i], linestyle='-', linewidth=2,
-            label=f'Household {i+1}')
-ax.set_xlabel(r'$\tau_z$', fontsize=14)
-ax.set_ylabel('Relative Income Drop', fontsize=14)
-ax.set_title('Leisure Held Constant', fontsize=16)
-ax.legend(fontsize=10)
+            label=f'$i={i+1}$')
+ax.set_xlabel(r'$\tau_z$', fontsize=12)
+ax.set_ylabel(r'relative $m^d_i+l$ drop', fontsize=12)
+ax.set_title(r'$\ell_i$ constant', fontsize=12)
+ax.legend(fontsize=10, loc='upper right')
 
 # Right subplot: Updated Leisure Outcomes
 ax = axes[1]
 for i in range(n):
     ax.plot(tau_z_values, relative_drop_update[i, :],
             color=colors[i], linestyle='-', linewidth=2,
-            label=f'Household {i+1}')
-ax.set_xlabel(r'$\tau_z$', fontsize=14)
-ax.set_title('Updated Leisure Outcomes', fontsize=16)
-ax.legend(fontsize=10)
+            label=f'$i=${i+1}')
+ax.set_xlabel(r'$\tau_z$', fontsize=12)
+ax.set_title('$\ell_i$ changes', fontsize=12)
+ax.legend(fontsize=10, loc='upper right')
 
 plt.tight_layout()
 plt.savefig("relative_income_drop_side_by_side.pdf")
