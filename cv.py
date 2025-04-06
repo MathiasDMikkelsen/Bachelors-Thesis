@@ -70,3 +70,5 @@ plt.legend()
 plt.tight_layout()
 plt.savefig("relative_cv.pdf")
 plt.show()
+
+# i. compensate wage

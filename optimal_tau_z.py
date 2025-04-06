@@ -10,14 +10,24 @@ theta = 1.0       # degree of pollution disutility
 # xi will be the parameter over which we vary in this analysis.
 
 # We hold tau_w constant (all zeros)
-tau_w_const = np.zeros(n)
+tau_w_const = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 
 def swf_for_tau_z(tau_z, xi):
-
+    """
+    For a given tau_z and xi, solve the inner equilibrium (with tau_w=0 and G fixed)
+    and calculate social welfare as:
+    
+        SWF = sum_i U_i - xi*(z_c + z_d)^theta
+    
+    where U_i are the household utilities (returned in results['utilities']),
+    and z_c, z_d are computed in inner_solver.
+    
+    If the inner solver does not converge, return a large penalty.
+    """
     sol, res, conv = solver.solve(tau_w_const, tau_z, G)
     if not conv:
         return -1e10  # Penalize non-convergence
-    # Retrieve utilities and aggregate pollution measure from the results
+  
     utilities = res.get('utilities', np.zeros(n))
     agg_polluting = res.get('z_c', 0) + res.get('z_d', 0)
     welfare = np.sum(utilities) - xi * (agg_polluting**theta)
@@ -29,12 +39,9 @@ def objective_tau_z(x, xi):
     return -swf_for_tau_z(tau_z, xi)
 
 def find_optimal_tau_z(xi):
-    """
-    For a given xi, find the optimal tau_z in [0.1, 3.0] that maximizes social welfare.
-    Returns the optimal tau_z.
-    """
+
     x0 = np.array([0.5])
-    bounds = [(0.1, 3.0)]
+    bounds = [(0.1, 30.0)]
     res = minimize(objective_tau_z, x0, args=(xi,), method='SLSQP', bounds=bounds)
     if res.success:
         return res.x[0]
@@ -42,8 +49,8 @@ def find_optimal_tau_z(xi):
         print(f"Optimization failed for xi = {xi:.2f}: {res.message}")
         return np.nan
 
-# --- Vary xi from 0.1 to 1.0 and record corresponding optimal tau_z ---
-xi_values = np.linspace(0.1, 0.6, 100)
+
+xi_values = np.linspace(0.1, 10.0, 100)
 optimal_tau_z_array = np.zeros_like(xi_values)
 
 for idx, xi in enumerate(xi_values):
