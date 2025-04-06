@@ -1,12 +1,12 @@
 import numpy as np
-from WORKING_LABOR_MARKET.inner_labormarkets import solve  # Make sure inner_solver.py contains the updated solve function
+from inner_labormarkets import solve  # Make sure inner_solver.py contains the updated solve function
 
 # a. Set fiscal parameters
-tau_w = np.array([0.1, 0.12, 0.15, 0.18, 0.2])
+tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 g = 5.0
 
 # b. Create a range of tau_z values
-tau_z_values = np.linspace(0.1, 3.0, 100)
+tau_z_values = np.linspace(0.01, 3.0, 200)
 
 # c. Track failures
 failed_tau_z = []
