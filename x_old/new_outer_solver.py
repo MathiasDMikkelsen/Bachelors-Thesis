@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
-import inner_solver as solver
+import a_solvers.inner_solver as solver
 
 # Model parameters (consistent with inner_solver)
 xi = 0.2

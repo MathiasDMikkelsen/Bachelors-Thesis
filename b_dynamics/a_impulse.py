@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from inner_solver import solve
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from a_solvers.inner_solver import solve
 
 # a. set policy
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
@@ -61,5 +66,5 @@ axs[1, 2].set_xlabel(r'$\tau_z$', fontsize=8)
 axs[1, 2].set_ylabel(r'$w$', fontsize=8)
 
 plt.tight_layout()
-plt.savefig("a_impulse_resp.pdf")
+plt.savefig("b_dynamics/a_impulse.pdf")
 plt.show()

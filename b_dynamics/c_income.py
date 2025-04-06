@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from inner_solver import solve, phi, t, n, tau_w
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from a_solvers.inner_solver import solve, phi, t, n, tau_w
 
 tau_w = np.array([0] * n)
 g = 0.0
@@ -77,5 +82,5 @@ ax.set_title('$\ell_i$ changes', fontsize=12)
 ax.legend(fontsize=10, loc='upper right')
 
 plt.tight_layout()
-plt.savefig("relative_income_drop_side_by_side.pdf")
+plt.savefig("b_dynamics/c_income.pdf")
 plt.show()

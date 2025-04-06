@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-import inner_solver as solver
-from inner_solver import n, phi, t  # t is assumed defined in inner_solver
+import a_solvers.inner_solver as solver
+from a_solvers.inner_solver import n, phi, t  # t is assumed defined in inner_solver
 
 # Parameters for the outer objective
 G = 5.0           # Fixed lump-sum component in the model
