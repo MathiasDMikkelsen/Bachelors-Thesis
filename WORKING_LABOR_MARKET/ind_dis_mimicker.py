@@ -16,8 +16,8 @@ params_seg = {
     'r_d_fixed': -1.0,
     # Base values for OPTIMIZED parameters (used for initial guess)
     'epsilon_d_base': 0.92,
-    'phi_d_base_norm': np.array([0.164465/2, 0.327578/2, (1-0.164465-0.327578)/2]), # Length 3, sums to 1.0
-    'phi_c_base_norm': np.array([0.319319/2, (1-0.319319)/2]),         # Length 2, sums to 1.0
+    'phi_d_base_norm': np.array([0.164465, 0.327578, (1-0.164465-0.327578)]), # Length 3, sums to 1.0
+    'phi_c_base_norm': np.array([0.319319, (1-0.319319)]),         # Length 2, sums to 1.0
     'n': 5 # Total households
 }
 # Update n_d and n_c based on the structure
@@ -109,7 +109,7 @@ if len(tau_w_input) != params_seg['n']:
      raise ValueError("tau_w_input length mismatch")
 print(f"Using tau_w: {tau_w_input} (First {params_seg['n_d']} for Dirty, Last {params_seg['n_c']} for Clean)")
 
-tau_z_input = 0.1
+tau_z_input = 0.2
 g_input = 5.0
 print(f"Using fixed inputs: tau_z = {tau_z_input}, g = {g_input}")
 
@@ -124,11 +124,11 @@ print(f"Keeping fixed: eps_c={epsilon_c_fixed}, r_c={r_c_fixed}, r_d={r_d_fixed}
 # 1. Define the Target Income Distribution SHARES
 # Shares for 3 Dirty + 2 Clean households
 target_income_shares = np.array([
-    0.03690,  # HH 1 (Dirty) share
-    0.09420,  # HH 2 (Dirty) share
-    0.1529,  # HH 3 (Dirty) share
-    0.2363,  # HH 4 (Clean) share
-    0.4798   # HH 5 (Clean) share
+    0.0400,  # HH 1 (Dirty) share
+    0.0961,  # HH 2 (Dirty) share
+    0.1537,  # HH 3 (Dirty) share
+    0.2356,  # HH 4 (Clean) share
+    0.4746   # HH 5 (Clean) share
 ])
 if len(target_income_shares) != params_seg['n']:
      raise ValueError("target_income_shares length mismatch")

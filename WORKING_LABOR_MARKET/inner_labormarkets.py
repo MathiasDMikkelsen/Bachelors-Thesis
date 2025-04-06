@@ -9,7 +9,7 @@ r = -1.0
 t = 24.0
 d0 = 0.5
 epsilon_c = 0.995
-epsilon_d = 0.601853
+epsilon_d = 0.582302
 p_c = 1.0 # Numeraire
 
 # --- MODIFIED SECTION ---
@@ -18,8 +18,8 @@ p_c = 1.0 # Numeraire
 # Clarification: phi_d sums to 1, phi_c sums to 1.
 # These represent productivity/efficiency units for households in each sector.
 # Example values are chosen, ensure they sum to 1 within each sector.
-phi_d = np.array([0.164465/2, 0.327578/2, (1-0.164465-0.327578)/2])  # Dirty sector households (3 types, sum = 1.0)
-phi_c = np.array([0.319319/2, (1-0.319319)/2])       # Clean sector households (2 types, sum = 1.0)
+phi_d = np.array([0.053164, 0.322405, (1-0.053164-0.322405)])  # Dirty sector households (3 types, sum = 1.0)
+phi_c = np.array([0.295018, (1-0.295018)])       # Clean sector households (2 types, sum = 1.0)
 
 # --- END MODIFIED SECTION ---
 
@@ -205,7 +205,7 @@ def solve(tau_w, tau_z, g):
 # Ensure tau_w has n=5 elements (3 for dirty, 2 for clean sector)
 # The meaning changes: first 3 are for dirty, last 2 for clean
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-tau_z = 0.1
+tau_z = 0.2
 g = 5.0
 
 # Solve model

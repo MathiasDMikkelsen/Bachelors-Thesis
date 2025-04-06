@@ -11,7 +11,7 @@ t = 24.0 # Changed time endowment as per provided code
 d0 = 0.5
 epsilon_c = 0.995
 # epsilon_d = 0.92 # Original value
-epsilon_d = 0.601853 # Changed value as per provided code
+epsilon_d = 0.582302 # Changed value as per provided code
 p_c = 1.0 # Numeraire
 
 # --- MODIFIED SECTION ---
@@ -21,8 +21,8 @@ p_c = 1.0 # Numeraire
 # These represent productivity/efficiency units for households in each sector.
 # Example values are chosen, ensure they sum to 1 within each sector.
 # Using values from provided code
-phi_d = np.array([0.164465/2, 0.327578/2, (1-0.164465-0.327578)/2])  # Dirty sector households (3 types, sum = 1.0)
-phi_c = np.array([0.319319/2, (1-0.319319)/2])       # Clean sector households (2 types, sum = 1.0)
+phi_d = np.array([0.053164, 0.322405, (1-0.053164-0.322405)])  # Dirty sector households (3 types, sum = 1.0)
+phi_c = np.array([0.295018, (1-0.295018)])       # Clean sector households (2 types, sum = 1.0)
 
 # --- END MODIFIED SECTION ---
 
@@ -213,7 +213,7 @@ def solve(tau_w, tau_z, g):
 # The meaning changes: first 3 are for dirty, last 2 for clean
 # Using values from provided code
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-tau_z = 0.1
+tau_z = 0.2
 g = 5.0
 
 # Solve model
