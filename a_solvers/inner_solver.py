@@ -92,7 +92,7 @@ def solve(tau_w, tau_z, g):
 
 tau_w = np.array([-1.75, -0.5, 0.0, 0.25, 0.55]) # klenert optimality
 tau_z = 1.0
-g = 5.0
+g = 0.0
     
 solution, results, converged = solve(tau_w, tau_z, g)
     
@@ -113,3 +113,5 @@ for i in range(n):
 print("\nhousehold utilities:")
 for i in range(n):
         print(f"household {i+1}: utility = {results['utilities'][i]:.4f}")
+        
+print(results['z_c']+results['z_d'])
