@@ -9,9 +9,8 @@ from a_solvers.inner_solver import solve, phi, t, n, tau_w
 
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 g = 5.0
-tau_z_values = np.linspace(0.1, 3.0, 50)
+tau_z_values = np.linspace(0.1, 5.0, 50)
 
-# --- Baseline Equilibrium (tau_z_baseline = 0.1) ---
 tau_z_baseline = 0.1
 sol_base, res_base, conv_base = solve(tau_w, tau_z_baseline, g)
 if not conv_base:
@@ -21,15 +20,10 @@ w_base = res_base["w"]
 l_base = res_base["l"]
 l_agents_base = res_base["l_agents"]
 
-# Baseline disposable income for each household:
-# m_base = phi[i] * w_base * (1-tau_w[i]) * (t - l_agents_base[i]) + l_base
 income_baseline = np.zeros(n)
 for i in range(n):
     income_baseline[i] = phi[i] * w_base * (1 - tau_w[i]) * (t - l_agents_base[i]) + l_base
 
-# Initialize arrays to store new disposable income:
-# (1) Holding leisure constant (using baseline leisure)
-# (2) Using updated leisure outcomes
 income_new_const = np.zeros((n, len(tau_z_values)))
 income_new_update = np.zeros((n, len(tau_z_values)))
 
@@ -45,14 +39,13 @@ for j, tau_z in enumerate(tau_z_values):
         l_new = res_new["l"]
         l_agents_new = res_new["l_agents"]
         for i in range(n):
-            # (1) Holding leisure constant: use baseline leisure (l_agents_base, l_base)
+
             income_new_const[i, j] = (phi[i] * w_new * (1 - tau_w[i]) *
                                         (t - l_agents_base[i]) + l_base)
             # (2) Using updated leisure outcomes:
             income_new_update[i, j] = (phi[i] * w_new * (1 - tau_w[i]) *
                                        (t - l_agents_new[i]) + l_new)
 
-# Compute relative drop in disposable income: (m_base - m_new) / m_base.
 relative_drop_const = (income_new_const-income_baseline.reshape(-1, 1)) / income_baseline.reshape(-1, 1)
 relative_drop_update = (income_new_update-income_baseline.reshape(-1, 1)) / income_baseline.reshape(-1, 1)
 
@@ -83,4 +76,3 @@ ax.legend(fontsize=12, loc='upper right')
 
 plt.tight_layout()
 plt.savefig("b_dynamics/c_income.pdf")
-plt.show()

@@ -40,17 +40,21 @@ for i in range(n):
                  gamma * np.log(l_agents_base[i]))
 
 # d. expenditure function
-A = alpha + beta + gamma
-def E_star(p_d, U_target):
-    return (A/alpha) * np.exp((U_target - beta*np.log(beta/(alpha*p_d)) - gamma*np.log(gamma/alpha)) / A) + p_d*d0
+def E_star(p_d, w, U_target):
+    A = alpha + beta + gamma
+    # Compute the multiplicative factor K:
+    K = (( (A/alpha)*p_c )**alpha * ((A/beta)*p_d)**beta * ((A/gamma)*(1-tau_w[i])*phi[i]*w)**gamma )**(1/A)
+    # Expenditure function:
+    E_net = K * np.exp(U_target / A)
+    return p_d * d0 + E_net
 
 # e. income base defined as minimum expediture needed to achieve baseline case utility (should be equal to actual baseline income due to duality)
 income_base = np.zeros(n)
 for i in range(n):
-    income_base[i] = E_star(p_d_base, U_base[i])
+    income_base[i] = E_star(p_d_base, w_base, U_base[i])
     
 # f. comupte cv
-tau_z_values = np.linspace(0.1, 3.0, 50)
+tau_z_values = np.linspace(0.1, 10.0, 50)
 CV_array     = np.zeros((n, len(tau_z_values)))
 rel_CV_array = np.zeros((n, len(tau_z_values)))
 
@@ -60,7 +64,7 @@ for j, tau_z in enumerate(tau_z_values):
         print(f"Model did not converge for tau_z = {tau_z:.2f}")
     p_d_new = res_new["p_d"]
     for i in range(n):
-        expenditure_needed = E_star(p_d_new, U_base[i])
+        expenditure_needed = E_star(p_d_new, w_base, U_base[i])
         CV_array[i, j] = expenditure_needed - income_base[i]
         rel_CV_array[i, j] = CV_array[i, j] / income_base[i]
 
@@ -74,4 +78,4 @@ plt.ylabel(r'$\frac{CV_i}{m^d_i}$', fontsize=14)
 plt.legend()
 plt.tight_layout()
 plt.savefig("b_dynamics/b_cv.pdf")
-plt.show()
+
