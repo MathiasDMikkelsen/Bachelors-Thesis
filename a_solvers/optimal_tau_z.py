@@ -1,8 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
+import sys
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 import a_solvers.inner_solver as solver
 from a_solvers.inner_solver import n, phi, t  # t is assumed defined in inner_solver
+
+
 
 # Parameters for the outer objective
 G = 5.0           # Fixed lump-sum component in the model
