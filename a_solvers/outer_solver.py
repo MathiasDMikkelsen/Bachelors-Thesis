@@ -5,12 +5,12 @@ from inner_solver import alpha, beta, gamma, d0, phi, n
 
 # a. parameters
 T = 24
-xi = 0.2
+# xi = 0.1 # Removed this line
 theta = 1.0
-G = 5.0 
+G = 5.0
 
 # b. maximize social welfare
-def maximize_welfare(G):
+def maximize_welfare(G, xi): # <-- Changed this line only
 
     # b1. define objective function
     def swf_obj(x):
@@ -23,19 +23,19 @@ def maximize_welfare(G):
             if not converged:
                 return 1e10  # penalize inner layer non-convergence
 
-            utilities = results['utilities']  
+            utilities = results['utilities']
             agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
-            
+
             welfare = np.sum(utilities) - 5*xi * (agg_polluting**theta)
             return -welfare  # calculate and return negative welfare
-        
+
         except Exception as e:
             print(f"Solver failed with error: {e}")
             return 1e10  # penalize inner layer failiure
 
     # b2. define ic constraints
     def ic_constraints(x):
-  
+
         tau_w = x[0:n]
         tau_z = x[n]
 
@@ -49,7 +49,7 @@ def maximize_welfare(G):
                 I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] # compute income for hh j
 
             g_list = []
-            
+
             for i in range(n):
                 U_i = results['utilities'][i]
                 for j in range(n):
@@ -62,10 +62,10 @@ def maximize_welfare(G):
                     denom = (1.0 - tau_w[j]) * phi[i] * results['w']
                     if denom == 0: # ial: changed from "<=0" to only avoid division by zero
                         g_list.append(-1e6)
-                        continue  
+                        continue
 
                     ell_i_j = T - I[j] / denom # comute leisure for hh i pretending to be hh j
-                    
+
                     if ell_i_j <= 0:
                         U_i_j = -1e6 # throw away corner solutions
                     else:
@@ -85,9 +85,9 @@ def maximize_welfare(G):
             return -np.ones(n*(n-1)) * 1e6  # penzlize if ic constraints cannot be evaluated
 
     # b3. define ic constraints as a nonlinear constraint
-    nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf) 
+    nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
-    # b4. initial guess. 
+    # b4. initial guess.
     initial_tau_w = [(0.0)]*n # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
@@ -115,7 +115,8 @@ def maximize_welfare(G):
         return None, None, None
 
 # c. run optimization
-optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G)
+xi_example_value = 0.1 # Or any other example value you want to test
+optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value)
 
 if optimal_tau_w is not None:
     print("\nresults at optimal tax rates:")
@@ -157,7 +158,7 @@ if optimal_tau_w is not None:
         print(f"\ngood c market clearing residual: {(results['agg_c'] + 0.5*G) - results['f_c']:.10f}")
     else:
         print("inner solver did not converge at optimal tax rates")
-        
+
     agg_polluting = results['z_c'] + results['z_d']
 effective_utilities = results['utilities']
 

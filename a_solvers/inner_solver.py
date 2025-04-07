@@ -90,7 +90,7 @@ def solve(tau_w, tau_z, g):
     
     return sol.x, results, sol.success
 
-tau_w = np.array([-1.75, -0.5, 0.0, 0.25, 0.55]) # klenert optimality
+tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24]) # klenert optimality
 tau_z = 1.0
 g = 5.0
     
