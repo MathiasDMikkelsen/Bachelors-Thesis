@@ -46,7 +46,7 @@ def maximize_welfare(G):
 
             I = np.zeros(n)
             for j in range(n):
-                I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] + results['l'] # compute income for hh j
+                I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] # compute income for hh j
 
             g_list = []
             
