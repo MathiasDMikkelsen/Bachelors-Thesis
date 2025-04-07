@@ -5,7 +5,7 @@ from inner_solver import alpha, beta, gamma, d0, phi, n
 
 # a. parameters
 T = 24
-xi = 0.1
+xi = 0.2
 theta = 1.0
 G = 5.0 
 
@@ -26,7 +26,7 @@ def maximize_welfare(G):
             utilities = results['utilities']  
             agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
             
-            welfare = np.sum(utilities) - xi * (agg_polluting**theta)
+            welfare = np.sum(utilities) - 5*xi * (agg_polluting**theta)
             return -welfare  # calculate and return negative welfare
         
         except Exception as e:
@@ -157,3 +157,22 @@ if optimal_tau_w is not None:
         print(f"\ngood c market clearing residual: {(results['agg_c'] + 0.5*G) - results['f_c']:.10f}")
     else:
         print("inner solver did not converge at optimal tax rates")
+        
+    agg_polluting = results['z_c'] + results['z_d']
+effective_utilities = results['utilities']
+
+# Define a function to compute the Gini coefficient
+def gini(array):
+    # Convert to numpy array and flatten
+    array = np.array(array).flatten()
+    # Sort the array
+    sorted_array = np.sort(array)
+    n = array.size
+    # Create index numbers (1-indexed)
+    index = np.arange(1, n+1)
+    # Compute Gini coefficient using the standard formula
+    return (np.sum((2 * index - n - 1) * sorted_array)) / (n * np.sum(sorted_array))
+
+# Calculate the Gini coefficient for effective utilities
+gini_value = gini(effective_utilities)
+print("Gini coefficient in effective utility:", gini_value)
