@@ -1,120 +1,234 @@
 import numpy as np
 from scipy.optimize import root
 
-# a. parameters
-alpha = 0.7
-beta = 0.2
-gamma = 0.2
-r = -1.0
-t = 24.0
-d0 = 0.5
-epsilon_c = 0.995
-epsilon_d = 0.92
-p_c = 1.0
-phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
-n = len(phi)
+# a. model parameters
+alpha = 0.24
+beta = 0.45
+gamma = 0.31
+d0 = 0.2
+phi = np.array([0.6, 0.8, 1.0, 1.2, 1.4])
+n = phi.size
 
-def solve(tau_w, tau_z, g):
+# b. production parameters
+theta_c = 0.33
+theta_d = 0.66
+varphi = 0.5
+epsilon = 0.3
+T = 24  # Maximum labor supply
 
-    def system_eqns(y):
+def solve(tau_w, tau_z, G):
+    """Solve the general equilibrium model."""
 
-        t_c, t_d, log_z_c, log_z_d, w, p_d, l = y
-        z_c = np.exp(log_z_c)
-        z_d = np.exp(log_z_d)
+    # 1. set up
+    # ensure tau_w is an array
+    tau_w = np.array(tau_w)
 
-        f_c = (epsilon_c * (t_c**r) + (1 - epsilon_c) * (z_c**r))**(1/r)
-        f_d = (epsilon_d * (t_d**r) + (1 - epsilon_d) * (z_d**r))**(1/r)
+    # a. exogenous prices
+    T_C = 1.0
+    T_D = 1.0
+    Z_C = 1.0
+    Z_D = 1.0
+    w = 1.0
+    p_D = 1.0
+    L = 1.0
 
-        c_agents = (alpha/(p_c*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0)
-        d_agents = (beta/(p_d*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0) + d0
-        l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*t + l - p_d*d0)
+    # b. objective function
+    def obj(x):
+        """Objective function to find the root of."""
 
-        agg_labor = np.sum(phi*(t - l_agents))
-        agg_d = np.sum(d_agents)
+        # i. rename
+        T_C = x[0]
+        T_D = x[1]
+        Z_C = x[2]
+        Z_D = x[3]
+        w = x[4]
+        p_D = x[5]
+        L = x[6]
 
-        eq1 = t_c + t_d - agg_labor
-        eq2 = (agg_d + 0.5*g/p_d) - f_d
-        eq3 = w - epsilon_c * (t_c**(r-1)) * (f_c**(1-r))
-        eq4 = tau_z - (1 - epsilon_c) * (z_c**(r-1)) * (f_c**(1-r))
-        eq5 = w - epsilon_d * (t_d**(r-1)) * (f_d**(1-r)) * p_d
-        eq6 = tau_z - (1 - epsilon_d) * (z_d**(r-1)) * (f_d**(1-r)) * p_d
-        eq7 = n*l - (np.sum(tau_w * w * phi * (t - l_agents)) + tau_z*(z_c+z_d) - g)
+        # ii. implied values
 
-        # Constraints: Return negative values if constraints are violated
-        c_min = np.min(c_agents)
-        d_min = np.min(d_agents - d0)
-        ell_min = np.min(l_agents)
+        # a. firm behavior
+        K_C = (theta_c * w / T_C)**(1/(1-theta_c)) * L
+        K_D = (theta_d * w / (p_D * T_D))**(1/(1-theta_d)) * L
+        f_C = T_C * K_C**(theta_c) * L**(1-theta_c)
+        f_D = T_D * K_D**(theta_d) * L**(1-theta_d)
+        profit_c = f_C - w*L - T_C*K_C
+        profit_d = p_D*f_D - w*L - T_D*K_D
 
-        return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7, c_min, d_min, ell_min])
+        # b. household behavior
+        budget_errors = np.zeros(n)
+        c_agents = np.zeros(n)
+        d_agents = np.zeros(n)
+        l_agents = np.zeros(n)
+        u_agents = np.zeros(n)
 
-    y0 = np.array([0.3, 0.4, np.log(0.6), np.log(0.4), 0.5, 1.5, 0.1, 0.1, 0.1, 0.1]) # Add initial guesses for the constraints
+        agg_c = 0.0
+        agg_d = 0.0
+        agg_labor = 0.0
 
-    sol = root(system_eqns, y0, method='lm')
+        for i in range(n):
+            # 1. labor supply
+            l_supply = (gamma / (1-tau_w[i])) * (1 / w) * (alpha * w * (1-tau_w[i]) / 1 + beta * p_D) * (phi[i] * w * T)
+            # 2. demands
+            c = alpha * (phi[i] * w * (T - l_supply) + L) / 1
+            d = beta * (phi[i] * w * (T - l_supply) + L) / p_D + d0
 
-    t_c, t_d, log_z_c, log_z_d, w, p_d, l = sol.x
-    z_c = np.exp(log_z_c)
-    z_d = np.exp(log_z_d)
+            # 3. utility
+            u = alpha * np.log(c) + beta * np.log(d - d0) + gamma * np.log(l_supply)
 
-    f_c = (epsilon_c * (t_c**r) + (1 - epsilon_c) * (z_c**r))**(1/r)
-    f_d = (epsilon_d * (t_d**r) + (1 - epsilon_d) * (z_d**r))**(1/r)
+            # 4. budget error
+            budget_error = (phi[i] * w * (T - l_supply) + L) - (c + p_D * (d - d0))
 
-    c_agents = (alpha/(p_c*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0)
-    d_agents = (beta/(p_d*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0) + d0
-    l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*t + l - p_d*d0)
+            # 5. store
+            c_agents[i] = c
+            d_agents[i] = d
+            l_agents[i] = l_supply
+            u_agents[i] = u
+            budget_errors[i] = budget_error
 
-    agg_c = np.sum(c_agents)
-    agg_d = np.sum(d_agents)
-    agg_labor = np.sum(phi*(t - l_agents))
+            # 6. aggregate
+            agg_c += c
+            agg_d += d
+            agg_labor += (T - l_supply)
 
-    profit_c = f_c - w*t_c - tau_z*z_c
-    profit_d = p_d*f_d - w*t_d - tau_z*z_d
+        # c. market clearing
+        good_c_mkt_clearing = (agg_c + varphi*G) - f_C
+        good_d_mkt_clearing = agg_d - f_D
+        labor_mkt_clearing = agg_labor - L
+        pollution_mkt_clearing = (Z_C + Z_D) - G
+
+        # iii. return
+        return np.array([
+            good_c_mkt_clearing,
+            good_d_mkt_clearing,
+            labor_mkt_clearing,
+            pollution_mkt_clearing,
+            profit_c + tau_z* (Z_C + Z_D),
+            profit_d,
+            np.sum(tau_w*phi*w*(T-l_agents)) + tau_z*(Z_C + Z_D) - L
+        ])
+
+    # c. constraints
+    def constraint_c(x):
+        """Consumption must be positive."""
+        c_agents = np.zeros(n)
+        L = x[6]
+        w = x[4]
+        p_D = x[5]
+        for i in range(n):
+            l_supply = (gamma / (1-tau_w[i])) * (1 / w) * (alpha * w * (1-tau_w[i]) / 1 + beta * p_D) * (phi[i] * w * T)
+            c = alpha * (phi[i] * w * (T - l_supply) + L) / 1
+            c_agents[i] = c
+        return np.min(c_agents)
+
+    def constraint_d(x):
+        """Demand must be greater than d0."""
+        d_agents = np.zeros(n)
+        L = x[6]
+        w = x[4]
+        p_D = x[5]
+        for i in range(n):
+            l_supply = (gamma / (1-tau_w[i])) * (1 / w) * (alpha * w * (1-tau_w[i]) / 1 + beta * p_D) * (phi[i] * w * T)
+            d = beta * (phi[i] * w * (T - l_supply) + L) / p_D + d0
+            d_agents[i] = d
+        return np.min(d_agents) - d0
+
+    def constraint_ell(x):
+        """Leisure must be positive."""
+        l_agents = np.zeros(n)
+        L = x[6]
+        w = x[4]
+        p_D = x[5]
+        for i in range(n):
+            l_supply = (gamma / (1-tau_w[i])) * (1 / w) * (alpha * w * (1-tau_w[i]) / 1 + beta * p_D) * (phi[i] * w * T)
+            l_agents[i] = l_supply
+        return np.min(l_agents)
+
+    def constraint_T(x):
+        """Total labor supply must be positive."""
+        L = x[6]
+        return L
+
+    # d. initial guess
+    initial_guess = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+
+    # e. find root
+    constraints = ({'type': 'ineq', 'fun': constraint_c},
+                   {'type': 'ineq', 'fun': constraint_d},
+                   {'type': 'ineq', 'fun': constraint_ell},
+                   {'type': 'ineq', 'fun': constraint_T})
+
+    sol = root(obj, initial_guess, method='lm', constraints=constraints)
+
+    # f. check convergence
+    converged = sol.success
+    message = sol.message
+    x = sol.x
+
+    # g. report
+    if not converged:
+        print(f'GE solve failed: {message}')
+        return None, None, False
+
+    # h. implied values
+    T_C = x[0]
+    T_D = x[1]
+    Z_C = x[2]
+    Z_D = x[3]
+    w = x[4]
+    p_D = x[5]
+    L = x[6]
+
+    K_C = (theta_c * w / T_C)**(1/(1-theta_c)) * L
+    K_D = (theta_d * w / (p_D * T_D))**(1/(1-theta_d)) * L
+    f_C = T_C * K_C**(theta_c) * L**(1-theta_c)
+    f_D = T_D * K_D**(theta_d) * L**(1-theta_d)
+    profit_c = f_C - w*L - T_C*K_C
+    profit_d = p_D*f_D - w*L - T_D*K_D
 
     budget_errors = np.zeros(n)
-    for i in range(n):
-        income = phi[i]*w*(1-tau_w[i])*(t - l_agents[i]) + l
-        expenditure = c_agents[i] + p_d*d_agents[i]
-        budget_errors[i] = income - expenditure
-
+    c_agents = np.zeros(n)
+    d_agents = np.zeros(n)
+    l_agents = np.zeros(n)
     utilities = np.zeros(n)
+
+    agg_c = 0.0
+    agg_d = 0.0
+    agg_labor = 0.0
+
     for i in range(n):
-        if c_agents[i] > 0 and (d_agents[i]-d0) > 0 and l_agents[i] > 0:
-            utilities[i] = alpha*np.log(c_agents[i]) + beta*np.log(d_agents[i]-d0) + gamma*np.log(l_agents[i])
-        else:
-            utilities[i] = -1e6
+        # 1. labor supply
+        l_supply = (gamma / (1-tau_w[i])) * (1 / w) * (alpha * w * (1-tau_w[i]) / 1 + beta * p_D) * (phi[i] * w * T)
 
+        # 2. demands
+        c = alpha * (phi[i] * w * (T - l_supply) + L) / 1
+        d = beta * (phi[i] * w * (T - l_supply) + L) / p_D + d0
+
+        # 3. utility
+        u = alpha * np.log(c) + beta * np.log(d - d0) + gamma * np.log(l_supply)
+
+        # 4. budget error
+        budget_error = (phi[i] * w * (T - l_supply) + L) - (c + p_D * (d - d0))
+
+        # 5. store
+        c_agents[i] = c
+        d_agents[i] = d
+        l_agents[i] = l_supply
+        utilities[i] = u
+        budget_errors[i] = budget_error
+
+        # 6. aggregate
+        agg_c += c
+        agg_d += d
+        agg_labor += (T - l_supply)
+
+    # i. return
     results = {
-        "t_c": t_c, "t_d": t_d, "z_c": z_c, "z_d": z_d, "w": w, "p_d": p_d, "l": l,
-        "f_c": f_c, "f_d": f_d,
-        "c_agents": c_agents, "d_agents": d_agents, "l_agents": l_agents,
-        "agg_c": agg_c, "agg_d": agg_d, "agg_labor": agg_labor,
-        "profit_c": profit_c, "profit_d": profit_d,
-        "budget_errors": budget_errors,
-        "utilities": utilities,
-        "sol": sol
+        'T_C': T_C, 'T_D': T_D, 'Z_C': Z_C, 'Z_D': Z_D, 'w': w, 'p_D': p_D, 'L': L,
+        'K_C': K_C, 'K_D': K_D, 'f_C': f_C, 'f_D': f_D, 'profit_c': profit_c, 'profit_d': profit_d,
+        'c_agents': c_agents, 'd_agents': d_agents, 'l_agents': l_agents, 'utilities': utilities, 'budget_errors': budget_errors,
+        'agg_c': agg_c, 'agg_d': agg_d, 'agg_labor': agg_labor,
+        'z_c': Z_C, 'z_d': Z_D, 't_c': T_C, 't_d': T_D,
+        'sol': sol
     }
-
-    return sol.x, results, sol.success
-
-tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24]) # klenert optimality
-tau_z = 1.0
-g = 5.0
-
-solution, results, converged = solve(tau_w, tau_z, g)
-
-print("solution status:", results["sol"].status)
-print("solution message:", results["sol"].message)
-print("convergence:", converged)
-print("solution vector [t_c, t_d, log_z_c, log_z_d, w, p_d, l]:")
-print(solution)
-
-print("\nproduction summary:")
-print(f"sector c: t_prod = {results['t_c']:.4f}, z_c = {results['z_c']:.4f}")
-print(f"sector d: t_prod = {results['t_d']:.4f}, z_d = {results['z_d']:.4f}")
-
-print("\nhousehold demands and leisure:")
-for i in range(n):
-    print(f"household {i+1}: c = {results['c_agents'][i]:.4f}, d = {results['d_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
-
-print("\nhousehold utilities:")
-for i in range(n):
-    print(f"household {i+1}: utility = {results['utilities'][i]:.4f}")
+    return x, results, converged
