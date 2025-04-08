@@ -11,7 +11,7 @@ d0 = 0.5
 epsilon_c = 0.995     
 epsilon_d = 0.92   
 p_c = 1.0      
-phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
+phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.511])
 n = len(phi)
 
 def solve(tau_w, tau_z, g):
