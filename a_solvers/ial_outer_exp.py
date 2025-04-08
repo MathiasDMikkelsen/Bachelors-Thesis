@@ -5,7 +5,7 @@ from inner_solver import alpha, beta, gamma, d0, phi, n
 
 # a. parameters
 T = 24
-# xi = 0.1 # Removed this line
+xi = 0.1 # Removed this line
 theta = 1.0
 G = 5.0
 
@@ -26,7 +26,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
             utilities = results['utilities']
             agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
 
-            welfare = np.sum(utilities) - 5*xi * (agg_polluting**theta)
+            welfare = np.sum(np.exp(utilities)) - 5*xi * (agg_polluting**theta)
             return -welfare  # calculate and return negative welfare
 
         except Exception as e:
@@ -88,7 +88,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
     # b4. initial guess.
-    initial_tau_w = [(0.0)]*n # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
+    initial_tau_w = [-1.5, -0.5, -0.2, 0.1, 0.5]# actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 

@@ -98,4 +98,4 @@ axs[2,2].set_ylabel(r'$\sum d_i$', fontsize=12, rotation=90)
 
 plt.tight_layout()
 plt.savefig("b_dynamics/a_impulse.pdf")
-
+plt.show()
