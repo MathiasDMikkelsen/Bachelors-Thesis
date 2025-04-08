@@ -1,11 +1,11 @@
-# plot_revenue_vs_xi.py (Corrected theta import AGAIN)
+# plot_revenue_vs_xi.py (Legend bottom right)
 
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import outer_solver # Imports the outer solver with maximize_welfare(G, xi)
 import inner_solver as solver # Import inner solver directly too
-# *** Removed theta from this import line ***
+# *** Removed theta from import, defined locally below ***
 from inner_solver import n, phi, t as T # Import necessary params from inner_solver
 
 # --- Simulation Parameters ---
@@ -13,7 +13,7 @@ G_value = 5.0
 # *** Ensure theta is defined locally ***
 theta = 1.0
 # Set xi_values as requested
-xi_values = np.linspace(0, 0.4, 21)
+xi_values = np.linspace(0.001, 1.0, 25) # Using the value from the previous working version
 # --- End Simulation Parameters ---
 
 # Lists to store results
@@ -113,9 +113,9 @@ if np.any(valid_tot_indices):
 plt.xlabel(r'$\xi$', fontsize=14)
 plt.ylabel('Total Revenue', fontsize=14)
 
-# Add legend
+# Add legend *** Changed location ***
 if np.any(valid_env_indices) or np.any(valid_inc_indices) or np.any(valid_tot_indices):
-    plt.legend()
+    plt.legend(loc='lower right') # <-- Set location to bottom right
 
 # Apply tight layout
 plt.tight_layout()

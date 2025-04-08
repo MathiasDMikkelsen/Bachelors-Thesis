@@ -17,7 +17,7 @@ fixed_tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 theta = 1.0
 
 # Define the range and number of xi values to test
-xi_values = np.linspace(0, 1.0, 25) # Example: 0 to 0.4 in 21 steps
+xi_values = np.linspace(0.001, 1.0, 25) # Example: 0 to 0.4 in 21 steps
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w ---
