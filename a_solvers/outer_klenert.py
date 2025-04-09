@@ -8,9 +8,10 @@ T = 24
 xi = 0.1 # Removed this line
 theta = 1.0
 G = 5.0
+elasticity =  0.5
 
 # b. maximize social welfare
-def maximize_welfare(G, xi): # <-- Changed this line only
+def maximize_welfare(G, xi, elasticity): # <-- Changed this line only
 
     # b1. define objective function
     def swf_obj(x):
@@ -26,7 +27,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
             utilities = results['utilities']
             agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
 
-            welfare = np.sum(np.exp(utilities)) - 5*xi * (agg_polluting**theta)
+            welfare = np.sum((1-elasticity)**(-1)*np.exp(utilities))**(1-elasticity)-5*xi * (agg_polluting**theta)
             return -welfare  # calculate and return negative welfare
 
         except Exception as e:
@@ -116,7 +117,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
 
 # c. run optimization
 xi_example_value = 0.1 # Or any other example value you want to test
-optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value)
+optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value, elasticity)
 
 if optimal_tau_w is not None:
     print("\nresults at optimal tax rates:")

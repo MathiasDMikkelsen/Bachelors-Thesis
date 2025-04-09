@@ -15,30 +15,32 @@ phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.511])
 #phi = np.array([0.2]*5)
 n = len(phi)
 
-def solve(tau_w, tau_z, g):
+def solve(tau_w, tau_z):
     
     def system_eqns(y):
     
-        t_c, t_d, log_z_c, log_z_d, w, p_d, l = y
+        t_c, t_d, log_z_c, log_z_d, w, p_d, G = y
         z_c = np.exp(log_z_c)
         z_d = np.exp(log_z_d)
         
         f_c = (epsilon_c * (t_c**r) + (1 - epsilon_c) * (z_c**r))**(1/r)
         f_d = (epsilon_d * (t_d**r) + (1 - epsilon_d) * (z_d**r))**(1/r)
         
-        d_agents = (beta/(p_d*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0) + d0
-        l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*t + l - p_d*d0)
+        # Agent-level equations:
+        d_agents = (beta/(p_d*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t - p_d*d0) + d0
+        l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*t - p_d*d0)
         
         agg_labor = np.sum(phi*(t - l_agents))
         agg_d = np.sum(d_agents)
         
         eq1 = t_c + t_d - agg_labor
-        eq2 = (agg_d + 0.5*g/p_d) - f_d
+        eq2 = (agg_d) + G/2 - f_d
         eq3 = w - epsilon_c * (t_c**(r-1)) * (f_c**(1-r))
-        eq4 = tau_z - (1 - epsilon_c) * (z_c**(r-1)) * (f_c**(1-r))
+        eq4 = tau_z - (1 - epsilon_c) * (np.exp(log_z_c)**(r-1)) * (f_c**(1-r))
         eq5 = w - epsilon_d * (t_d**(r-1)) * (f_d**(1-r)) * p_d
-        eq6 = tau_z - (1 - epsilon_d) * (z_d**(r-1)) * (f_d**(1-r)) * p_d
-        eq7 = n*l - (np.sum(tau_w * w * phi * (t - l_agents)) + tau_z*(z_c+z_d) - g)
+        eq6 = tau_z - (1 - epsilon_d) * (np.exp(log_z_d)**(r-1)) * (f_d**(1-r)) * p_d
+        # Modified eq7: Government consumption G equals total tax revenue.
+        eq7 = G - (np.sum(tau_w * w * phi * (t - l_agents)) + tau_z*(np.exp(log_z_c)+np.exp(log_z_d)))
         
         return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7])
     
@@ -46,16 +48,16 @@ def solve(tau_w, tau_z, g):
     
     sol = root(system_eqns, y0, method='lm')
     
-    t_c, t_d, log_z_c, log_z_d, w, p_d, l = sol.x
+    t_c, t_d, log_z_c, log_z_d, w, p_d, G = sol.x
     z_c = np.exp(log_z_c)
     z_d = np.exp(log_z_d)
     
     f_c = (epsilon_c * (t_c**r) + (1 - epsilon_c) * (z_c**r))**(1/r)
     f_d = (epsilon_d * (t_d**r) + (1 - epsilon_d) * (z_d**r))**(1/r)
     
-    c_agents = (alpha/(p_c*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0)
-    d_agents = (beta/(p_d*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t + l - p_d*d0) + d0
-    l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*t + l - p_d*d0)
+    c_agents = (alpha/(p_c*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t - p_d*d0)
+    d_agents = (beta/(p_d*(alpha+beta+gamma)))*(phi*w*(1-tau_w)*t - p_d*d0) + d0
+    l_agents = (gamma/((alpha+beta+gamma)*(1-tau_w)*phi*w))*(phi*w*(1-tau_w)*t - p_d*d0)
     
     agg_c = np.sum(c_agents)
     agg_d = np.sum(d_agents)
@@ -66,7 +68,7 @@ def solve(tau_w, tau_z, g):
     
     budget_errors = np.zeros(n)
     for i in range(n):
-        income = phi[i]*w*(1-tau_w[i])*(t - l_agents[i]) + l
+        income = phi[i]*w*(1-tau_w[i])*(t - l_agents[i])
         expenditure = c_agents[i] + p_d*d_agents[i]
         budget_errors[i] = income - expenditure
     
@@ -80,7 +82,7 @@ def solve(tau_w, tau_z, g):
     agg_utility = np.sum(utilities)
     
     results = {
-        "t_c": t_c, "t_d": t_d, "z_c": z_c, "z_d": z_d, "w": w, "p_d": p_d, "l": l,
+        "t_c": t_c, "t_d": t_d, "z_c": z_c, "z_d": z_d, "w": w, "p_d": p_d,
         "f_c": f_c, "f_d": f_d,
         "c_agents": c_agents, "d_agents": d_agents, "l_agents": l_agents,
         "agg_c": agg_c, "agg_d": agg_d, "agg_labor": agg_labor,
@@ -88,23 +90,21 @@ def solve(tau_w, tau_z, g):
         "profit_c": profit_c, "profit_d": profit_d,
         "budget_errors": budget_errors,
         "utilities": utilities,
+        "G": G,
         "sol": sol
     }
     
     return sol.x, results, sol.success
 
 # Example run
-#tau_w = np.array([0]*5)
-tau_w = np.array([-1.0, -1.0, 0, 0.6, 0.6])
+tau_w = np.array([0]*5)
 tau_z = 1.0
-g = 0.0
-    
-solution, results, converged = solve(tau_w, tau_z, g)
+solution, results, converged = solve(tau_w, tau_z)
     
 print("solution status:", results["sol"].status)
 print("solution message:", results["sol"].message)
 print("convergence:", converged)
-print("solution vector [t_c, t_d, log_z_c, log_z_d, w, p_d, l]:")
+print("solution vector [t_c, t_d, log_z_c, log_z_d, w, p_d, G]:")
 print(solution)
     
 print("\nproduction summary:")
@@ -120,9 +120,11 @@ print(f"Aggregate c: {results['agg_c']:.4f}")
 print(f"Aggregate d: {results['agg_d']:.4f}")
 print(f"Aggregate leisure (labor): {results['agg_labor']:.4f}")
 print(f"Aggregate utility: {results['agg_utility']:.4f}")
+print(f"Implied Government Consumption: {results['G']:.4f}")
 
-# Print aggregate pollution (z_c + z_d)
-print(f"\nAggregate Pollution: {results['z_c'] + results['z_d']:.4f}")
+print("\nMarket residuals (budget errors) per household:")
+for i in range(n):
+    print(f"household {i+1}: residual = {results['budget_errors'][i]:.4f}")
 
 print("\nhousehold utilities:")
 for i in range(n):
