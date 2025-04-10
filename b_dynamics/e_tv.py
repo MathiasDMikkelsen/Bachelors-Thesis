@@ -160,5 +160,5 @@ axs[1, 2].set_title('SWF for σ = 1.5', fontsize=14)
 axs[1, 2].legend()
 
 plt.tight_layout()
-plt.savefig("b_dynamics/CombinedMetrics.pdf")
+plt.savefig("b_dynamics/e_tv.pdf")
 plt.show()
