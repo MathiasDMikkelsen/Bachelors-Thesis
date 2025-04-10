@@ -98,7 +98,7 @@ def solve(tau_w, tau_z):
 
 # Example run
 tau_w = np.array([0]*5)
-tau_z = 1.0
+tau_z = 0.1
 solution, results, converged = solve(tau_w, tau_z)
     
 print("solution status:", results["sol"].status)

@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-import outer_solver # Imports the outer solver with maximize_welfare(G, xi)
+import outer_klenert as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
 import inner_solver as solver # Import inner solver directly too
 # Removed theta from import, defined locally below
 from inner_solver import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params

@@ -17,7 +17,7 @@ tau_w_new = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.6324159
 g = 5.0
 
 # b. Range for tau_z
-tau_z_values = np.linspace(0.1, 10.0, 50)
+tau_z_values = np.linspace(0.5, 1.0, 50)
 
 # Prepare storage lists for the two scenarios (each list is a list of impulse responses for that variable):
 # For original tau_w:
