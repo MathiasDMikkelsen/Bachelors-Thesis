@@ -96,7 +96,7 @@ for j, tau_z in enumerate(tau_z_values):
         income_new = (phi[i] * w_new *
                       (1 - tau_w[i]) * (t - l_agents_new[i]) + l_new)
         # Total Variation: change in required expenditure + change in income.
-        TV_array[i, j] = (E_new_val - baseline_exp[i]) + (income_new - baseline_income[i])
+        TV_array[i, j] = (E_new_val - baseline_exp[i]) - (income_new - baseline_income[i])
         # Utility loss: baseline utility (from inner solver) minus new utility.
         abs_UL_array[i, j] = baseline_util[i] - U_new[i]
 
