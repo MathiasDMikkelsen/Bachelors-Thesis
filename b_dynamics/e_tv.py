@@ -88,7 +88,7 @@ for j, tau_z in enumerate(tau_z_values):
     U_new        = res_new["utilities"]  # utilities from inner solver
 
     # Compute SWF for sigma = 0.5 and sigma = 1.5 using the inner solver utilities:
-    swf_sigma_05[j] = (1/5)*np.sum(U_new) - 5*xi*(z_c+z_d)
+    swf_sigma_05[j] = np.sum(U_new) - 5*xi*(z_c+z_d)
     swf_sigma_15[j] = np.sum(U_new.min()) - 5*xi*(z_c+z_d)
     
     for i in range(n):
