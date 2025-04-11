@@ -67,7 +67,7 @@ for i in range(n):
 # At baseline, by duality, baseline_exp equals baseline_income so TV = 0.
 
 # f. Set up arrays for TV, Utility Loss, and SWF (using same tau_z grid)
-tau_z_values = np.linspace(0.1, 20.0, 50)
+tau_z_values = np.linspace(0.1, 2.0, 50)
 TV_array     = np.zeros((n, len(tau_z_values)))
 abs_UL_array = np.zeros((n, len(tau_z_values)))  # Absolute utility loss: baseline_util - U_new
 
