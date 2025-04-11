@@ -26,7 +26,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
             utilities = results['utilities']
             agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
 
-            welfare = np.sum(np.exp(utilities)) - 5*xi * (agg_polluting**theta)
+            welfare = np.sum(utilities)-5*xi * (agg_polluting**theta)
             return -welfare  # calculate and return negative welfare
 
         except Exception as e:

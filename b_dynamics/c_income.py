@@ -9,7 +9,7 @@ from a_solvers.inner_solver import solve, phi, t, n, tau_w
 
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 g = 5.0
-tau_z_values = np.linspace(0.1, 3.0, 50)
+tau_z_values = np.linspace(0.1, 1.0, 50)
 
 # --- Baseline Equilibrium (tau_z_baseline = 0.1) ---
 tau_z_baseline = 0.1
