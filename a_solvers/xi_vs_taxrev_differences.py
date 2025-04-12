@@ -1,4 +1,4 @@
-# plot_revenue_comparison_2scen.py (Legend below plot in 2 rows)
+# plot_revenue_difference_2scen.py
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ theta = 1.0 # Define theta locally
 fixed_tau_w_optimal_xi01 = np.array([-1.12963781, -0.06584074,  0.2043803,   0.38336986,  0.63241591])
 
 # Define the range of xi values to test
-xi_values = np.linspace(0.1, 1.0, 50)
+xi_values = np.linspace(0.1, 1.0, 25) # Using 25 points as in the provided script
 # --- End Simulation Parameters ---
 
 # --- Helper Function to optimize ONLY tau_z for FIXED tau_w ---
@@ -46,7 +46,7 @@ def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
 # --- End Helper Function ---
 
 
-# Lists to store results
+# Lists to store results (same as before)
 rev_opt_w_env = []
 rev_opt_w_inc = []
 rev_opt_w_tot = []
@@ -66,7 +66,7 @@ for xi_val in xi_values:
     current_rev_opt_w_env = np.nan; current_rev_opt_w_inc = np.nan; current_rev_opt_w_tot = np.nan
     current_rev_fix_opt01_env = np.nan; current_rev_fix_opt01_inc = np.nan; current_rev_fix_opt01_tot = np.nan
 
-    # Scenario 1
+    # Scenario 1: Variable tau_w
     try:
         opt_tau_w, opt_tau_z, _ = outer_solver.maximize_welfare(G_value, xi_val)
         if opt_tau_w is not None and opt_tau_z is not None:
@@ -78,12 +78,12 @@ for xi_val in xi_values:
                 gross_labor_income_i = phi * results['w'] * hours_worked_i
                 current_rev_opt_w_inc = np.sum(opt_tau_w * gross_labor_income_i)
                 current_rev_opt_w_tot = current_rev_opt_w_env + current_rev_opt_w_inc
-    except Exception as e: print(f"    Error during Scenario 1 for xi = {xi_val:.4f}: {e}")
+    except Exception as e: print(f"      Error during Scenario 1 for xi = {xi_val:.4f}: {e}")
     rev_opt_w_env.append(current_rev_opt_w_env)
     rev_opt_w_inc.append(current_rev_opt_w_inc)
     rev_opt_w_tot.append(current_rev_opt_w_tot)
 
-    # Scenario 3
+    # Scenario 2: Fixed Optimal (xi=0.1) tau_w
     try:
         opt_tau_z_fix_opt01, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01)
         if opt_tau_z_fix_opt01 is not None:
@@ -95,7 +95,7 @@ for xi_val in xi_values:
                 gross_labor_income_i = phi * results['w'] * hours_worked_i
                 current_rev_fix_opt01_inc = np.sum(fixed_tau_w_optimal_xi01 * gross_labor_income_i)
                 current_rev_fix_opt01_tot = current_rev_fix_opt01_env + current_rev_fix_opt01_inc
-    except Exception as e: print(f"    Error during Scenario 3 for xi = {xi_val:.4f}: {e}")
+    except Exception as e: print(f"      Error during Scenario 2 for xi = {xi_val:.4f}: {e}")
     rev_fix_opt01_env.append(current_rev_fix_opt01_env)
     rev_fix_opt01_inc.append(current_rev_fix_opt01_inc)
     rev_fix_opt01_tot.append(current_rev_fix_opt01_tot)
@@ -103,57 +103,69 @@ for xi_val in xi_values:
 print("-" * 30)
 print("Simulations complete.")
 
-# --- Plotting ---
+# --- Calculate Differences ---
 
-# Convert lists to numpy arrays
+# Convert lists to numpy arrays first
 rev_opt_w_env = np.array(rev_opt_w_env); rev_opt_w_inc = np.array(rev_opt_w_inc); rev_opt_w_tot = np.array(rev_opt_w_tot)
 rev_fix_opt01_env = np.array(rev_fix_opt01_env); rev_fix_opt01_inc = np.array(rev_fix_opt01_inc); rev_fix_opt01_tot = np.array(rev_fix_opt01_tot)
 valid_xi_values_processed = np.array(valid_xi_values_processed)
 
-# Create the plot - *** Reverted to original figsize ***
-fig, ax = plt.subplots(figsize=(10, 7.0))
+# Calculate the difference (Variable - Fixed)
+# np.subtract handles potential NaNs gracefully (result is NaN if either operand is NaN)
+diff_rev_tot = np.subtract(rev_opt_w_tot, rev_fix_opt01_tot)
+diff_rev_env = np.subtract(rev_opt_w_env, rev_fix_opt01_env)
+diff_rev_inc = np.subtract(rev_opt_w_inc, rev_fix_opt01_inc)
 
-# Define colors, styles, labels
-color_opt_tot = 'tab:blue';   ls_opt_tot = '-'; lw_opt_tot = 2; label_opt_tot = 'Total Rev. (Var $\\tau_w$)'
-color_opt_env = 'tab:green';  ls_opt_env = '--'; label_opt_env = 'Env. Rev. (Var $\\tau_w$)'
-color_opt_inc = 'tab:red';    ls_opt_inc = ':'; label_opt_inc = 'Inc. Rev. (Var $\\tau_w$)'
-color_fix_tot = 'tab:purple'; ls_fix_tot = '-'; lw_fix_tot = 1; label_fix_tot = 'Total Rev. (Fixed $\\tau_w$ Opt)'
-color_fix_env = 'tab:orange'; ls_fix_env = '--'; label_fix_env = 'Env. Rev. (Fixed $\\tau_w$ Opt)'
-color_fix_inc = 'tab:brown';  ls_fix_inc = ':'; label_fix_inc = 'Inc. Rev. (Fixed $\\tau_w$ Opt)'
-color_g = 'grey'; label_g = f'G={G_value}'
 
-# Plot Lines - Filter NaNs for each
-valid_opt_env_idx = ~np.isnan(rev_opt_w_env); valid_opt_inc_idx = ~np.isnan(rev_opt_w_inc); valid_opt_tot_idx = ~np.isnan(rev_opt_w_tot)
-valid_fix_env_idx = ~np.isnan(rev_fix_opt01_env); valid_fix_inc_idx = ~np.isnan(rev_fix_opt01_inc); valid_fix_tot_idx = ~np.isnan(rev_fix_opt01_tot)
+# --- Plotting Differences ---
 
-if np.any(valid_opt_env_idx): ax.plot(valid_xi_values_processed[valid_opt_env_idx], rev_opt_w_env[valid_opt_env_idx], linestyle=ls_opt_env, color=color_opt_env, label=label_opt_env)
-if np.any(valid_opt_inc_idx): ax.plot(valid_xi_values_processed[valid_opt_inc_idx], rev_opt_w_inc[valid_opt_inc_idx], linestyle=ls_opt_inc, color=color_opt_inc, label=label_opt_inc)
-if np.any(valid_opt_tot_idx): ax.plot(valid_xi_values_processed[valid_opt_tot_idx], rev_opt_w_tot[valid_opt_tot_idx], linestyle=ls_opt_tot, color=color_opt_tot, label=label_opt_tot, linewidth=lw_opt_tot)
-if np.any(valid_fix_env_idx): ax.plot(valid_xi_values_processed[valid_fix_env_idx], rev_fix_opt01_env[valid_fix_env_idx], linestyle=ls_fix_env, color=color_fix_env, label=label_fix_env)
-if np.any(valid_fix_inc_idx): ax.plot(valid_xi_values_processed[valid_fix_inc_idx], rev_fix_opt01_inc[valid_fix_inc_idx], linestyle=ls_fix_inc, color=color_fix_inc, label=label_fix_inc)
-if np.any(valid_fix_tot_idx): ax.plot(valid_xi_values_processed[valid_fix_tot_idx], rev_fix_opt01_tot[valid_fix_tot_idx], linestyle=ls_fix_tot, color=color_fix_tot, label=label_fix_tot, linewidth=lw_fix_tot)
-ax.axhline(y=G_value, color=color_g, linestyle='--', linewidth=1.5, label=label_g)
+fig, ax = plt.subplots(figsize=(8, 5)) # Adjusted figsize
 
-# Add labels
+# Define colors, styles, labels for the DIFFERENCE plots
+color_diff_tot = 'tab:blue';  ls_diff_tot = '-';  lw_diff_tot = 2.0; label_diff_tot = 'Total Rev. Diff.'
+color_diff_env = 'tab:green'; ls_diff_env = '--'; lw_diff_env = 1.5; label_diff_env = 'Env. Rev. Diff.'
+color_diff_inc = 'tab:red';   ls_diff_inc = ':';  lw_diff_inc = 1.5; label_diff_inc = 'Inc. Rev. Diff.'
+
+# Plot Lines - Filter NaNs for each difference array
+valid_diff_tot_idx = ~np.isnan(diff_rev_tot)
+valid_diff_env_idx = ~np.isnan(diff_rev_env)
+valid_diff_inc_idx = ~np.isnan(diff_rev_inc)
+
+if np.any(valid_diff_tot_idx):
+    ax.plot(valid_xi_values_processed[valid_diff_tot_idx],
+            diff_rev_tot[valid_diff_tot_idx],
+            linestyle=ls_diff_tot, color=color_diff_tot, label=label_diff_tot, linewidth=lw_diff_tot)
+if np.any(valid_diff_env_idx):
+    ax.plot(valid_xi_values_processed[valid_diff_env_idx],
+            diff_rev_env[valid_diff_env_idx],
+            linestyle=ls_diff_env, color=color_diff_env, label=label_diff_env, linewidth=lw_diff_env)
+if np.any(valid_diff_inc_idx):
+    ax.plot(valid_xi_values_processed[valid_diff_inc_idx],
+            diff_rev_inc[valid_diff_inc_idx],
+            linestyle=ls_diff_inc, color=color_diff_inc, label=label_diff_inc, linewidth=lw_diff_inc)
+
+# Add a horizontal line at y=0 for reference
+ax.axhline(y=0, color='black', linestyle='-', linewidth=0.8, label='Zero Difference')
+
+# Add labels and title
 ax.set_xlabel(r'$\xi$', fontsize=14)
-ax.set_ylabel('Tax Revenue', fontsize=14)
+ax.set_ylabel('Revenue Difference (Variable - Fixed Opt)', fontsize=12) # Updated Y-axis label
+ax.set_title('Difference in Tax Revenues between Scenarios', fontsize=16) # Updated Title
 
-# Add legend *** Positioned below plot in 4 columns ***
-# Check if at least one line has valid data
-if np.any([valid_opt_env_idx, valid_opt_inc_idx, valid_opt_tot_idx, valid_fix_env_idx, valid_fix_inc_idx, valid_fix_tot_idx]):
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), # Anchor below axes (y<0), centered horizontally (x=0.5)
-              ncol=4, fontsize='small') # Arrange in 4 columns (fits 7 items in 2 rows)
+# Add legend (adjust position as needed, e.g., 'best')
+ax.legend(loc='best')
 
-# Adjust layout to make room for legend below plot
-plt.subplots_adjust(bottom=0.25) # Increase bottom margin (adjust value as needed)
+# Apply tight layout
+plt.tight_layout()
 
 # Save the figure
 output_dir = "xi_sensitivity_graphs"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-output_filename = "revenue_comparison_var_vs_fixedopt01_legend_below.pdf" # New filename
+# New filename for the difference plot
+output_filename = "revenue_difference_var_vs_fixedopt01.pdf"
 output_path = os.path.join(output_dir, output_filename)
-plt.savefig(output_path, bbox_inches='tight') # Use bbox_inches='tight' to include legend
-print(f"\nPlot saved to {output_path}")
+plt.savefig(output_path) # No need for bbox_inches='tight' if legend is inside plot
+print(f"\nDifference plot saved to {output_path}")
 
 plt.show()
