@@ -11,7 +11,7 @@ import math # To calculate grid dimensions if needed later
 # --- Simulation Parameters ---
 G_value = 5.0
 # Define the range and number of xi values to test
-xi_values = np.linspace(0.001, 1.0, 25)
+xi_values = np.linspace(0.04, 1.0, 25)
 # --- End Simulation Parameters ---
 
 # Lists to store results
