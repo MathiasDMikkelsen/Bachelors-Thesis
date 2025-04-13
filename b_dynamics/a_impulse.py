@@ -6,7 +6,7 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-from a_solvers.inner_solver import solve
+from a_solvers.inner_labor import solve
 
 # a. Set policies
 tau_w_orig = np.array([0.015, 0.072, 0.115, 0.156, 0.24])

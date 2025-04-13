@@ -13,7 +13,7 @@ params_seg = {
     # Fixed values (will not be changed by optimization)
     'epsilon_c_fixed': 0.995,
     'r_c_fixed': -1.0,
-    'r_d_fixed': -1.0,
+    'r_d_fixed': -(1-0.95)/0.95,
     # Base values for OPTIMIZED parameters (used for initial guess)
     'epsilon_d_base': 0.92,
     'phi_d_base_norm': np.array([0.164465, 0.327578, (1-0.164465-0.327578)]), # Length 3, sums to 1.0
@@ -109,7 +109,7 @@ if len(tau_w_input) != params_seg['n']:
      raise ValueError("tau_w_input length mismatch")
 print(f"Using tau_w: {tau_w_input} (First {params_seg['n_d']} for Dirty, Last {params_seg['n_c']} for Clean)")
 
-tau_z_input = 0.2
+tau_z_input = 0.1
 g_input = 5.0
 print(f"Using fixed inputs: tau_z = {tau_z_input}, g = {g_input}")
 
