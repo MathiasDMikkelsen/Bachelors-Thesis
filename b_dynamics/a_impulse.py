@@ -68,7 +68,7 @@ total_leisure_new     = [np.sum(la) for la in l_agents_new]
 total_consumption_new = [np.sum(ca) for ca in c_agents_new]
 total_demand_new      = [np.sum(da) for da in d_agents_new]
 
-fig, axs = plt.subplots(3, 3, figsize=(8.5, 6.5))
+fig, axs = plt.subplots(3, 3, figsize=(8.5, 7.5))
 
 # Use light blue for all lines
 light_blue = "#7aabd4"
@@ -78,48 +78,57 @@ axs[0,0].plot(tau_z_values, t_c_orig, color=light_blue, linestyle='-', linewidth
 axs[0,0].plot(tau_z_values, t_c_new, color=light_blue, linestyle='--', linewidth=2)
 axs[0,0].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[0,0].set_ylabel(r'$t_c$', fontsize=12, rotation=90)
+axs[0,0].set_title('Labor, clean sector', fontsize=12)
 
 axs[0,1].plot(tau_z_values, t_d_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[0,1].plot(tau_z_values, t_d_new, color=light_blue, linestyle='--', linewidth=2)
 axs[0,1].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[0,1].set_ylabel(r'$t_d$', fontsize=12, rotation=90)
+axs[0,1].set_title('Labor, dirty sector', fontsize=12)
 
 axs[0,2].plot(tau_z_values, z_c_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[0,2].plot(tau_z_values, z_c_new, color=light_blue, linestyle='--', linewidth=2)
 axs[0,2].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[0,2].set_ylabel(r'$z_c$', fontsize=12, rotation=90)
+axs[0,2].set_title('Pollution, clean sector', fontsize=12)
 
 # Middle row
 axs[1,0].plot(tau_z_values, z_d_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[1,0].plot(tau_z_values, z_d_new, color=light_blue, linestyle='--', linewidth=2)
 axs[1,0].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[1,0].set_ylabel(r'$z_d$', fontsize=12, rotation=90)
+axs[1,0].set_title('Pollution, dirty sector', fontsize=12)
 
 axs[1,1].plot(tau_z_values, p_d_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[1,1].plot(tau_z_values, p_d_new, color=light_blue, linestyle='--', linewidth=2)
 axs[1,1].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[1,1].set_ylabel(r'$p_d$', fontsize=12, rotation=90)
+axs[1,1].set_title('Price, dirty good', fontsize=12)
 
 axs[1,2].plot(tau_z_values, w_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[1,2].plot(tau_z_values, w_new, color=light_blue, linestyle='--', linewidth=2)
 axs[1,2].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[1,2].set_ylabel(r'$w$', fontsize=12, rotation=90)
+axs[1,2].set_title('Wage', fontsize=12)
 
 # Bottom row
 axs[2,0].plot(tau_z_values, total_leisure_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[2,0].plot(tau_z_values, total_leisure_new, color=light_blue, linestyle='--', linewidth=2)
 axs[2,0].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[2,0].set_ylabel(r'$\sum \ell_i$', fontsize=12, rotation=90)
+axs[2,0].set_title('Total leisure', fontsize=12)
 
 axs[2,1].plot(tau_z_values, total_consumption_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[2,1].plot(tau_z_values, total_consumption_new, color=light_blue, linestyle='--', linewidth=2)
 axs[2,1].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[2,1].set_ylabel(r'$\sum c_i$', fontsize=12, rotation=90)
+axs[2,1].set_title('Clean good supply', fontsize=12)
 
 axs[2,2].plot(tau_z_values, total_demand_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[2,2].plot(tau_z_values, total_demand_new, color=light_blue, linestyle='--', linewidth=2)
 axs[2,2].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[2,2].set_ylabel(r'$\sum d_i$', fontsize=12, rotation=90)
+axs[2,2].set_title('Dirty good supply', fontsize=12)
 
 for ax in axs.flat:
     ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
@@ -128,9 +137,8 @@ for ax in axs.flat:
 from matplotlib.lines import Line2D
 custom_lines = [Line2D([0], [0], color=light_blue, lw=2, linestyle='-'),
                 Line2D([0], [0], color=light_blue, lw=2, linestyle='--')]
-fig.legend(custom_lines, [r"$\tau_{w,i}^0$", r"$\tau_{w,i}^{opt}$"],
+fig.legend(custom_lines, [r"Pre-existing income tax $(\tau_{w,i}^0)$", r"Baseline optimal income tax $(\tau_{w,i}^{opt})$"],
            loc="lower center", ncol=2, frameon=False, fontsize=12)
 
 plt.tight_layout(rect=[0, 0.05, 1, 1])
 plt.savefig("b_dynamics/a_impulse.pdf")
-plt.show()

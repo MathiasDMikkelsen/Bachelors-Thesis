@@ -143,12 +143,15 @@ for j, tau_z in enumerate(tau_z_values):
 #    Panel 2 (Total income change) is on the top‐right, Panel 3 (Change in utility) is placed directly
 #    below Panel 1, and the legend is to the right of Panel 3.
 # =============================================================================
-# Define a common color palette for households.
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
+# Create a list of blue shades (one for each household) using the Blues colormap.
+blue_cmap = plt.cm.Blues
+colors = [blue_cmap(0.3 + 0.5 * i/(n-1)) for i in range(n)]
+line_width = 2.5  # Increased line width
 
 # Create a figure with a 2x2 grid.
-fig = plt.figure(figsize=(18, 12))
-gs = gridspec.GridSpec(2, 2, hspace=0.35, wspace=0.35)
+# Use a small horizontal gap (wspace=0.01) and vertical gap (hspace remains at 0.2).
+fig = plt.figure(figsize=(14, 11))
+gs = gridspec.GridSpec(2, 2, hspace=0.25, wspace=0.01)
 
 # Top left: Panel 1 (CV relative to income)
 ax0 = fig.add_subplot(gs[0, 0])
@@ -161,44 +164,49 @@ ax3 = fig.add_subplot(gs[1, 1])
 
 # Panel 1: CV Relative to Income
 for i in range(n):
-    ax0.plot(tau_z_values, CV_rel_orig[i, :], linestyle='-', color=colors[i])
-    ax0.plot(tau_z_values, CV_rel_alt[i, :], linestyle='--', color=colors[i])
+    ax0.plot(tau_z_values, CV_rel_orig[i, :], linestyle='-', lw=line_width, color=colors[i])
+    ax0.plot(tau_z_values, CV_rel_alt[i, :], linestyle='--', lw=line_width, color=colors[i])
 ax0.set_xlabel(r'$\tau_z$', fontsize=15)
 ax0.set_ylabel(r'$CV/m^d_i$', fontsize=15, labelpad=20)
 ax0.set_title('CV relative to income', fontsize=15)
 ax0.tick_params(labelsize=12)
 ax0.set_xlim(tau_z_values[0], tau_z_values[-1])
 ax0.yaxis.set_label_coords(-0.15, 0.5)
+ax0.set_box_aspect(1)
 
 # Panel 2: Total Income Change
 for i in range(n):
-    ax1.plot(tau_z_values, income_change_orig[i, :], linestyle='-', color=colors[i])
-    ax1.plot(tau_z_values, income_change_alt[i, :], linestyle='--', color=colors[i])
-ax1.axhline(0, color='grey', linestyle=':', linewidth=1.5)
+    ax1.plot(tau_z_values, income_change_orig[i, :], linestyle='-', lw=line_width, color=colors[i])
+    ax1.plot(tau_z_values, income_change_alt[i, :], linestyle='--', lw=line_width, color=colors[i])
+ax1.axhline(0, color='grey', linestyle='-', linewidth=2.5)
 ax1.set_xlabel(r'$\tau_z$', fontsize=15)
 ax1.set_ylabel(r'$\Delta m_i^d+\Delta l$', fontsize=15, labelpad=20)
 ax1.set_title('Total income change', fontsize=15)
 ax1.tick_params(labelsize=12)
 ax1.set_xlim(tau_z_values[0], tau_z_values[-1])
 ax1.yaxis.set_label_coords(-0.15, 0.5)
+ax1.set_box_aspect(1)
 
 # Panel 3: Change in Exponentially Transformed Utility
 for i in range(n):
-    ax2.plot(tau_z_values, utilities_change_orig[i, :], linestyle='-', color=colors[i])
-    ax2.plot(tau_z_values, utilities_change_alt[i, :], linestyle='--', color=colors[i])
-ax2.axhline(0, color='grey', linestyle=':', linewidth=1.5)
+    ax2.plot(tau_z_values, utilities_change_orig[i, :], linestyle='-', lw=line_width, color=colors[i])
+    ax2.plot(tau_z_values, utilities_change_alt[i, :], linestyle='--', lw=line_width, color=colors[i])
+ax2.axhline(0, color='grey', linestyle='-', linewidth=2.5)
 ax2.set_xlabel(r'$\tau_z$', fontsize=15)
 ax2.set_ylabel(r'$\Delta u_i$', fontsize=15, labelpad=20)
-ax2.set_title('Change in utility', fontsize=15)
+ax2.set_title(r'Change in utility', fontsize=15)
 ax2.tick_params(labelsize=12)
 ax2.set_xlim(tau_z_values[0], tau_z_values[-1])
 ax2.yaxis.set_label_coords(-0.15, 0.5)
+ax2.set_box_aspect(1)
 
+for ax in [ax0, ax1, ax2]:
+    ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
+    
 # Panel 4: Legend (placed to the right of Panel 3)
-ax3.axis('off')  # Turn off the axis for the legend panel.
-legend_handles = [Line2D([0], [0], color=colors[i], lw=3, label=rf'$i={i+1}$') for i in range(n)]
+ax3.axis('off')
+legend_handles = [Line2D([0], [0], color=colors[i], lw=line_width, label=rf'$i={i+1}$') for i in range(n)]
 ax3.legend(handles=legend_handles, loc='center', fontsize=15, frameon=False)
 
-plt.tight_layout(rect=[0, 0, 1, 0.95])
-plt.savefig("b_dynamics/b_ineq.pdf")
-plt.show()
+plt.tight_layout()
+plt.savefig("b_dynamics/b_ineq.pdf", bbox_inches='tight', pad_inches=0.05)
