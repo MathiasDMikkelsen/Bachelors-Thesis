@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize, NonlinearConstraint
-import inner_solver as solver
-from inner_solver import alpha, beta, gamma, d0, phi, n
+import a_solvers.inner_labor as solver
+from a_solvers.inner_labor import alpha, beta, gamma, d0, phi, n
 
 # a. parameters
 T = 24
@@ -88,12 +88,12 @@ def maximize_welfare(G, xi): # <-- Changed this line only
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
     # b4. initial guess.
-    initial_tau_w = [-1.5, -0.5, -0.2, 0.1, 0.5]# actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
-    initial_tau_z = 0.5
+    initial_tau_w = n*[0.1]# actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
+    initial_tau_z = 0.1
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
     # b5. bounds for tax rates
-    bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
+    bounds = [(-1.0, 1.0)] * n + [(1e-6, 100.0)]
 
     # b6. minimize negative welfare using slsqp
     result = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=[nonlinear_constraint])

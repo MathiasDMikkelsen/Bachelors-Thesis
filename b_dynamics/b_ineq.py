@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 from matplotlib.lines import Line2D
+import matplotlib.gridspec as gridspec
 
 # Set project root so that inner_solver can be imported.
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -138,52 +139,66 @@ for j, tau_z in enumerate(tau_z_values):
         utilities_change_alt[i, j] = np.exp(U_new_alt[i]) - np.exp(U_base_alt[i])
 
 # =============================================================================
-# 4. Plotting: Create one Figure with 3 Panels in one Row and One Combined Legend
+# 4. Plotting: Arrange the figures so that Panel 1 (CV relative to income) is on the top‐left,
+#    Panel 2 (Total income change) is on the top‐right, Panel 3 (Change in utility) is placed directly
+#    below Panel 1, and the legend is to the right of Panel 3.
 # =============================================================================
 # Define a common color palette for households.
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
 
-# Create one figure with three subplots in one row.
-fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-plt.rcParams.update({'font.size': 18})
+# Create a figure with a 2x2 grid.
+fig = plt.figure(figsize=(18, 12))
+gs = gridspec.GridSpec(2, 2, hspace=0.35, wspace=0.35)
 
-# Panel 1: CV Relative to Income (without horizontal line)
+# Top left: Panel 1 (CV relative to income)
+ax0 = fig.add_subplot(gs[0, 0])
+# Top right: Panel 2 (Total income change)
+ax1 = fig.add_subplot(gs[0, 1])
+# Bottom left: Panel 3 (Change in utility)
+ax2 = fig.add_subplot(gs[1, 0])
+# Bottom right: Legend
+ax3 = fig.add_subplot(gs[1, 1])
+
+# Panel 1: CV Relative to Income
 for i in range(n):
-    axes[0].plot(tau_z_values, CV_rel_orig[i, :], linestyle='-', color=colors[i])
-    axes[0].plot(tau_z_values, CV_rel_alt[i, :], linestyle='--', color=colors[i])
-axes[0].set_xlabel(r'$\tau_z$', fontsize=15)
-axes[0].set_ylabel(r'$CV/m^d_i$', fontsize=15)
-axes[0].set_title('CV relative to income', fontsize=15)
-axes[0].tick_params(labelsize=12.5)
-axes[0].set_xlim(tau_z_values[0], tau_z_values[-1])
+    ax0.plot(tau_z_values, CV_rel_orig[i, :], linestyle='-', color=colors[i])
+    ax0.plot(tau_z_values, CV_rel_alt[i, :], linestyle='--', color=colors[i])
+ax0.set_xlabel(r'$\tau_z$', fontsize=15)
+ax0.set_ylabel(r'$CV/m^d_i$', fontsize=15, labelpad=20)
+ax0.set_title('CV relative to income', fontsize=15)
+ax0.tick_params(labelsize=12)
+ax0.set_xlim(tau_z_values[0], tau_z_values[-1])
+ax0.yaxis.set_label_coords(-0.15, 0.5)
 
 # Panel 2: Total Income Change
 for i in range(n):
-    axes[1].plot(tau_z_values, income_change_orig[i, :], linestyle='-', color=colors[i])
-    axes[1].plot(tau_z_values, income_change_alt[i, :], linestyle='--', color=colors[i])
-axes[1].axhline(0, color='grey', linestyle=':', linewidth=1.5)
-axes[1].set_xlabel(r'$\tau_z$', fontsize=15)
-axes[1].set_ylabel(r'$\Delta m_i^d+\Delta l$', fontsize=15)
-axes[1].set_title('Total income change', fontsize=15)
-axes[1].tick_params(labelsize=12.5)
-axes[1].set_xlim(tau_z_values[0], tau_z_values[-1])
+    ax1.plot(tau_z_values, income_change_orig[i, :], linestyle='-', color=colors[i])
+    ax1.plot(tau_z_values, income_change_alt[i, :], linestyle='--', color=colors[i])
+ax1.axhline(0, color='grey', linestyle=':', linewidth=1.5)
+ax1.set_xlabel(r'$\tau_z$', fontsize=15)
+ax1.set_ylabel(r'$\Delta m_i^d+\Delta l$', fontsize=15, labelpad=20)
+ax1.set_title('Total income change', fontsize=15)
+ax1.tick_params(labelsize=12)
+ax1.set_xlim(tau_z_values[0], tau_z_values[-1])
+ax1.yaxis.set_label_coords(-0.15, 0.5)
 
 # Panel 3: Change in Exponentially Transformed Utility
 for i in range(n):
-    axes[2].plot(tau_z_values, utilities_change_orig[i, :], linestyle='-', color=colors[i])
-    axes[2].plot(tau_z_values, utilities_change_alt[i, :], linestyle='--', color=colors[i])
-axes[2].axhline(0, color='grey', linestyle=':', linewidth=1.5)
-axes[2].set_xlabel(r'$\tau_z$', fontsize=15)
-axes[2].set_ylabel(r'$\Delta u_i$', fontsize=15)
-axes[2].set_title('Change in utility', fontsize=15)
-axes[2].tick_params(labelsize=12.5)
-axes[2].set_xlim(tau_z_values[0], tau_z_values[-1])
+    ax2.plot(tau_z_values, utilities_change_orig[i, :], linestyle='-', color=colors[i])
+    ax2.plot(tau_z_values, utilities_change_alt[i, :], linestyle='--', color=colors[i])
+ax2.axhline(0, color='grey', linestyle=':', linewidth=1.5)
+ax2.set_xlabel(r'$\tau_z$', fontsize=15)
+ax2.set_ylabel(r'$\Delta u_i$', fontsize=15, labelpad=20)
+ax2.set_title('Change in utility', fontsize=15)
+ax2.tick_params(labelsize=12)
+ax2.set_xlim(tau_z_values[0], tau_z_values[-1])
+ax2.yaxis.set_label_coords(-0.15, 0.5)
 
-# ----- Combined Legend -----
+# Panel 4: Legend (placed to the right of Panel 3)
+ax3.axis('off')  # Turn off the axis for the legend panel.
 legend_handles = [Line2D([0], [0], color=colors[i], lw=3, label=rf'$i={i+1}$') for i in range(n)]
-fig.legend(handles=legend_handles, loc='lower center', bbox_to_anchor=(0.5, -0.01),
-           ncol=n, frameon=False, fontsize=12.5)
+ax3.legend(handles=legend_handles, loc='center', fontsize=15, frameon=False)
 
-plt.tight_layout(rect=[0, 0.05, 1, 1])
-plt.savefig("b_dynamics/combined_figure.pdf")
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.savefig("b_dynamics/b_ineq.pdf")
 plt.show()

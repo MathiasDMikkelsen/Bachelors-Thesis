@@ -65,7 +65,7 @@ for j, tau_z in enumerate(tau_z_values):
         rel_CV_array[i, j] = CV_array[i, j] / income_base[i]
 
 # h. plot
-plt.figure(figsize=(5, 3.5))
+plt.figure(figsize=(5, ))
 for i in range(n):
     plt.plot(tau_z_values, rel_CV_array[i, :],
              label=f'$i={i+1}$', linestyle='-')

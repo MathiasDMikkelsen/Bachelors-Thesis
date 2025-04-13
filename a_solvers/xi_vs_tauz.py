@@ -3,8 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-import outer_klenert as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
-import inner_solver as solver # Import inner solver directly too
+import outer_labor as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
+import a_solvers.inner_labor as solver # Import inner solver directly too
 # Removed theta from import, defined locally below
 from inner_solver import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
 import os # For saving figure
@@ -16,11 +16,11 @@ theta = 1.0
 
 # Define the fixed tau_w sets for scenario 2 and 3
 fixed_tau_w_preexisting = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-fixed_tau_w_optimal_xi01 = np.array([-1.12963781, -0.06584074,  0.2043803,   0.38336986,  0.63241591])
+fixed_tau_w_optimal_xi01 = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 
 # Define the range and number of xi values to test
 # Using the xi_values from your previous code version
-xi_values = np.linspace(0.1, 4.0, 25)
+xi_values = np.linspace(0.01, 0.05, 10)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---
