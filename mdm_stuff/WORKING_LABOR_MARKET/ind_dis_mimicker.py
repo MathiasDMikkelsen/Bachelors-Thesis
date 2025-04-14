@@ -13,7 +13,7 @@ params_seg = {
     # Fixed values (will not be changed by optimization)
     'epsilon_c_fixed': 0.995,
     'r_c_fixed': -1.0,
-    'r_d_fixed': -(1-0.95)/0.95,
+    'r_d_fixed': -(1-0.8)/0.8,
     # Base values for OPTIMIZED parameters (used for initial guess)
     'epsilon_d_base': 0.92,
     'phi_d_base_norm': np.array([0.164465, 0.327578, (1-0.164465-0.327578)]), # Length 3, sums to 1.0

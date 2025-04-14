@@ -14,12 +14,12 @@ r_d = -(1-0.8)/0.8  # Example value for the dirty sector (e.g., sigma_d = 2/3)
 t = 24.0
 d0 = 0.5
 epsilon_c = 0.995
-epsilon_d = 0.582302
+epsilon_d = 0.612971
 p_c = 1.0  # Numeraire
 
 # Productivity weights split by sector
-phi_d = np.array([0.071582, 0.323246, (1 - 0.071582 - 0.323246)])  # Dirty sector households (3 types, sum = 1.0)
-phi_c = np.array([0.297835, (1 - 0.297835)])                      # Clean sector households (2 types, sum = 1.0)
+phi_d = np.array([0.071745, 0.323251, (1 - 0.071745 - 0.323251)])  # Dirty sector households (3 types, sum = 1.0)
+phi_c = np.array([0.297862, (1 - 0.297862)])                      # Clean sector households (2 types, sum = 1.0)
 
 phi = np.concatenate([phi_d, phi_c])  # total phi for all 5 households
 n = len(phi)      # Total number of household types (3 + 2 = 5)
