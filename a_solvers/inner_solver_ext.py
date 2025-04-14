@@ -1,336 +1,245 @@
+# inner_solver.py (Baseline Modified for Abatement)
+
 import numpy as np
 from scipy.optimize import root
-import warnings
 
-# a. parameters
+# a. Baseline parameters
 alpha = 0.7
 beta = 0.2
 gamma = 0.2
-r_c = -1.0 # Example for clean sector
-r_d = -1.0 # Example for dirty sector
 t = 24.0
 d0 = 0.5
-epsilon_c = 0.9
-epsilon_d = 0.45
-p_c = 1.0 # Numeraire
+epsilon_c = 0.995 # Labor share parameter for clean firm (top level)
+epsilon_d = 0.92  # Labor share parameter for dirty firm (top level)
+sigma = 0.5       # Elasticity sigma (top level, labor vs composite Z/A)
+p_c = 1.0         # Numeraire
+phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.511])
+n = len(phi)      # Number of households/types
 
-# --- MODIFIED: Define parameters for 2 households (n=2) ---
-n = 2
-n_d = 1 # Number of dirty sector households
-n_c = 1 # Number of clean sector households
-# --- REMOVED: phi parameter definitions ---
-# phi_d_val = 1.0
-# phi_c_val = 1.0
-# phi = np.array([phi_d_val, phi_c_val])
-# --- Productivity (phi) is implicitly 1 for both households ---
-# -----------------------------------------------------------
+# b. New parameters for Abatement extension
+# Calibrate p_a once offline, then use the value here
+p_a = 15.0        # <<<<<<<< USER: SET YOUR CALIBRATED ABATEMENT PRICE HERE >>>>>>>>
+varsigma = 1.5    # Elasticity varsigma (ς) between pollution (z) and abatement (a)
+epsilon_z = 0.7   # Share parameter for pollution (z) in the z/a nest (must be 0 < eps_z < 1)
+
+# c. Define rho values from elasticities for convenience
+rho = (sigma - 1) / sigma
+rho_za = (varsigma - 1) / varsigma # rho for z/a nest (ς)
+
+# Ensure elasticities are valid
+if sigma == 1.0: rho = -np.inf # Handle Cobb-Douglas case if needed (though rho = -1 here)
+if varsigma == 1.0: rho_za = -np.inf # Handle Cobb-Douglas case if needed
 
 def solve(tau_w, tau_z, g):
     """
-    Solves the general equilibrium for the 2-household (phi=1), 2-sector model.
-
-    Args:
-        tau_w (np.array): Array of wage tax rates, length 2 [tau_w_d, tau_w_c].
-        tau_z (float): Tax rate on polluting input z.
-        g (float): Government consumption requirement.
-
-    Returns:
-        tuple: (solution_vector, results_dict, convergence_flag)
+    Solves the inner system for general equilibrium with abatement.
+    tau_w: array of length n for proportional income tax rates
+    tau_z: scalar environmental tax
+    g: scalar government consumption
+    p_a, varsigma, epsilon_z are read from global scope above
     """
-    if len(tau_w) != n:
-        raise ValueError(f"Length of tau_w ({len(tau_w)}) must be {n}")
-    tau_w_d = tau_w[0] # Tax for dirty worker
-    tau_w_c = tau_w[1] # Tax for clean worker
+    assert len(tau_w) == n, f"tau_w must have length n={n}"
+    assert 0 < epsilon_z < 1, "epsilon_z must be between 0 and 1"
 
     def system_eqns(y):
-        t_c, t_d, log_z_c, log_z_d, w_c, w_d, p_d, l = y
+        """Defines the system of 9 equilibrium equations."""
+        # Unpack unknowns: Now includes log_a_c, log_a_d
+        t_c, t_d, log_z_c, log_z_d, log_a_c, log_a_d, w, p_d, l = y
+        z_c = np.exp(log_z_c)
+        z_d = np.exp(log_z_d)
+        a_c = np.exp(log_a_c)
+        a_d = np.exp(log_a_d)
 
-        try:
-            z_c = np.exp(log_z_c)
-            z_d = np.exp(log_z_d)
-        except OverflowError:
-            return np.full(8, 1e10)
+        # --- Input Validation ---
+        if w <= 0 or p_d <= 0 or p_a <= 0 or tau_z <= 0: return np.ones(9) * 1e6
+        if t_c <= 0 or t_d <= 0 or z_c <= 0 or z_d <= 0 or a_c <= 0 or a_d <= 0: return np.ones(9) * 1e6
 
-        t_c_safe = t_c + 1e-9
-        t_d_safe = t_d + 1e-9
-        z_c_safe = z_c + 1e-9
-        z_d_safe = z_d + 1e-9
-        p_d_safe = p_d + 1e-9
-        w_c_safe = w_c + 1e-9
-        w_d_safe = w_d + 1e-9
+        # --- Calculate Nested Production ---
+        # Inner nest: Pollution/Abatement composite Y_j
+        # Handle potential division by zero if rho_za is zero (varsigma=1) -> Cobb-Douglas
+        if np.isinf(rho_za): # Cobb-Douglas case for Z/A nest
+            Y_c = (z_c**epsilon_z) * (a_c**(1 - epsilon_z))
+            Y_d = (z_d**epsilon_z) * (a_d**(1 - epsilon_z))
+        else: # CES case for Z/A nest
+             # Ensure base of power is positive for non-integer exponents if rho_za is tricky
+             term_zc = epsilon_z * (z_c**rho_za)
+             term_ac = (1 - epsilon_z) * (a_c**rho_za)
+             term_zd = epsilon_z * (z_d**rho_za)
+             term_ad = (1 - epsilon_z) * (a_d**rho_za)
+             if term_zc <= 0 or term_ac <= 0 or term_zd <= 0 or term_ad <= 0: return np.ones(9) * 1e6 # Base must be > 0
+             Y_c = (term_zc + term_ac)**(1/rho_za)
+             Y_d = (term_zd + term_ad)**(1/rho_za)
 
-        # --- Firm side ---
-        try:
-            if isinstance(r_c, complex) or isinstance(r_d, complex):
-                 raise ValueError("r values cannot be complex")
+        if Y_c <= 0 or Y_d <= 0: return np.ones(9) * 1e6 # Composite must be positive
 
-            f_c = (epsilon_c * (t_c_safe**r_c) + (1 - epsilon_c) * (z_c_safe**r_c))**(1/r_c)
-            f_d = (epsilon_d * (t_d_safe**r_d) + (1 - epsilon_d) * (z_d_safe**r_d))**(1/r_d)
+        # Outer nest: Final Output f_j
+        # Handle potential division by zero if rho is zero (sigma=1) -> Cobb-Douglas
+        if np.isinf(rho): # Cobb-Douglas case for top level
+            f_c = (t_c**epsilon_c) * (Y_c**(1 - epsilon_c))
+            f_d = (t_d**epsilon_d) * (Y_d**(1 - epsilon_d))
+        else: # CES case for top level
+            term_tc = epsilon_c * (t_c**rho)
+            term_Yc = (1 - epsilon_c) * (Y_c**rho)
+            term_td = epsilon_d * (t_d**rho)
+            term_Yd = (1 - epsilon_d) * (Y_d**rho)
+            if term_tc <= 0 or term_Yc <= 0 or term_td <= 0 or term_Yd <= 0: return np.ones(9) * 1e6
+            f_c = (term_tc + term_Yc)**(1/rho)
+            f_d = (term_td + term_Yd)**(1/rho)
 
-            if isinstance(f_c, complex) or isinstance(f_d, complex):
-                 return np.full(8, 1e9)
+        if f_c <= 0 or f_d <= 0: return np.ones(9) * 1e6 # Output must be positive
 
-        except (ValueError, OverflowError, ZeroDivisionError):
-             return np.full(8, 1e8)
+        # --- Household Behavior (Unchanged) ---
+        h_i = phi*w*(1-tau_w)*t + l - p_d*d0
+        if np.any(h_i <= 0): return np.ones(9) * 1e6
+        d_agents = (beta/(p_d*(alpha+beta+gamma))) * h_i + d0
+        leisure_denom = (alpha+beta+gamma)*(1-tau_w)*phi*w
+        if np.any(leisure_denom <= 0): return np.ones(9) * 1e6
+        l_agents = (gamma/leisure_denom) * h_i
+        if np.any(l_agents <= 0) or np.any(l_agents >= t): return np.ones(9) * 1e6
+        agg_labor = np.sum(phi*(t - l_agents))
+        agg_d = np.sum(d_agents)
 
-        # --- Household side (phi=1 for both) ---
-        # Calculate "full income potential net of committed expenditure" (Y_tilde)
-        # --- MODIFIED: Removed phi_d and phi_c (implicitly 1) ---
-        Y_tilde_d = w_d_safe * (1 - tau_w_d) * t + l - p_d_safe * d0
-        Y_tilde_c = w_c_safe * (1 - tau_w_c) * t + l - p_d_safe * d0
-        # -------------------------------------------------------
+        # --- Equilibrium Equations (Now 9) ---
+        # Eq1: Labor market clearing (unchanged structure)
+        eq1 = t_c + t_d - agg_labor
+        # Eq2: Dirty good market clearing (unchanged structure, uses new f_d)
+        eq2 = agg_d + 0.5*g/p_d - f_d
+        # Eq3: Firm c FOC for t_c: p_c * MPL_c = w (p_c=1)
+        MPL_c = epsilon_c * (f_c / t_c)**(1-rho) # 1-rho = 1/sigma
+        eq3 = p_c * MPL_c - w
+        # Eq4: Firm c FOC for z_c: p_c * MPZ_c = tau_z (p_c=1)
+        MPZ_c = (1-epsilon_c)*epsilon_z * (f_c/Y_c)**(1-rho) * (Y_c/z_c)**(1-rho_za)
+        eq4 = p_c * MPZ_c - tau_z
+        # Eq5: Firm d FOC for t_d: p_d * MPL_d = w
+        MPL_d = epsilon_d * (f_d / t_d)**(1-rho)
+        eq5 = p_d * MPL_d - w
+        # Eq6: Firm d FOC for z_d: p_d * MPZ_d = tau_z
+        MPZ_d = (1-epsilon_d)*epsilon_z * (f_d/Y_d)**(1-rho) * (Y_d/z_d)**(1-rho_za)
+        eq6 = p_d * MPZ_d - tau_z
+        # Eq7: Government budget constraint (unchanged structure)
+        income_tax_revenue = np.sum(tau_w * w * phi * (t - l_agents))
+        env_tax_revenue = tau_z * (z_c + z_d) # Tax is on NET pollution z
+        eq7 = n*l - (income_tax_revenue + env_tax_revenue - g)
+        # Eq8: Firm c FOC for a_c: p_c * MPA_c = p_a (p_c=1)
+        MPA_c = (1-epsilon_c)*(1-epsilon_z) * (f_c/Y_c)**(1-rho) * (Y_c/a_c)**(1-rho_za)
+        eq8 = p_c * MPA_c - p_a
+        # Eq9: Firm d FOC for a_d: p_d * MPA_d = p_a
+        MPA_d = (1-epsilon_d)*(1-epsilon_z) * (f_d/Y_d)**(1-rho) * (Y_d/a_d)**(1-rho_za)
+        eq9 = p_d * MPA_d - p_a
 
-        if Y_tilde_d <= 1e-9 or Y_tilde_c <= 1e-9:
-            return np.full(8, 1e7)
+        return np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9])
 
-        denom_shares = alpha + beta + gamma
-
-        # Demand for dirty good
-        d_agent_d = (beta / (p_d_safe * denom_shares)) * Y_tilde_d + d0
-        d_agent_c = (beta / (p_d_safe * denom_shares)) * Y_tilde_c + d0
-
-        # Demand for leisure
-        # --- MODIFIED: Removed phi_d and phi_c from price_leisure ---
-        price_leisure_d = w_d_safe * (1 - tau_w_d)
-        price_leisure_c = w_c_safe * (1 - tau_w_c)
-        # ----------------------------------------------------------
-        # Check if net wage is positive before dividing
-        if price_leisure_d <= 1e-9 or price_leisure_c <= 1e-9:
-             return np.full(8, 1e6) # Cannot calculate leisure if net wage is non-positive
-
-        l_agent_d = (gamma / (denom_shares * price_leisure_d)) * Y_tilde_d
-        l_agent_c = (gamma / (denom_shares * price_leisure_c)) * Y_tilde_c
-
-        l_agent_d = np.clip(l_agent_d, 1e-9, t - 1e-9)
-        l_agent_c = np.clip(l_agent_c, 1e-9, t - 1e-9)
-
-        # Labor supply (household time units = effective labor units since phi=1)
-        labor_supply_d = t - l_agent_d
-        labor_supply_c = t - l_agent_c
-
-        # --- System of Equations (8 equations) ---
-        try:
-            # --- MODIFIED: Labor market clearing uses labor_supply directly ---
-            # Eq1: Clean labor market: demand (t_c) = supply (labor_supply_c)
-            eq1 = t_c - labor_supply_c
-            # Eq2: Dirty labor market: demand (t_d) = supply (labor_supply_d)
-            eq2 = t_d - labor_supply_d
-            # -------------------------------------------------------------------
-
-            # Eq3: Dirty good market clearing
-            agg_d = d_agent_d + d_agent_c
-            eq3 = (agg_d + 0.5 * g / p_d_safe) - f_d
-
-            # Eq4: Firm C FOC Labor
-            MP_L_c = epsilon_c * (t_c_safe**(r_c - 1)) * (f_c**(1 - r_c))
-            eq4 = w_c - MP_L_c
-
-            # Eq5: Firm C FOC Z
-            MP_Z_c = (1 - epsilon_c) * (z_c_safe**(r_c - 1)) * (f_c**(1 - r_c))
-            eq5 = tau_z - MP_Z_c
-
-            # Eq6: Firm D FOC Labor
-            MP_L_d = epsilon_d * (t_d_safe**(r_d - 1)) * (f_d**(1 - r_d))
-            eq6 = w_d - MP_L_d * p_d
-
-            # Eq7: Firm D FOC Z
-            MP_Z_d = (1 - epsilon_d) * (z_d_safe**(r_d - 1)) * (f_d**(1 - r_d))
-            eq7 = tau_z - MP_Z_d * p_d
-
-            if any(np.isnan([eq4, eq5, eq6, eq7])) or any(np.isinf([eq4, eq5, eq6, eq7])):
-                return np.full(8, 1e6)
-
-            # Eq8: Government budget constraint
-            # --- MODIFIED: wage_tax_rev uses labor_supply directly ---
-            wage_tax_rev = tau_w_d * w_d_safe * labor_supply_d + tau_w_c * w_c_safe * labor_supply_c
-            # ------------------------------------------------------
-            z_tax_rev = tau_z * (z_c + z_d)
-            gov_spending = g + n * l # n=2
-            eq8 = (wage_tax_rev + z_tax_rev) - gov_spending
-
-            residuals = np.array([eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8])
-            if np.any(np.isnan(residuals)) or np.any(np.isinf(residuals)):
-                 return np.full(8, 1e5)
-            return residuals
-
-        except (ValueError, OverflowError, ZeroDivisionError):
-             return np.full(8, 1e4)
-
-
-    # Initial guess for 8 variables
-    y0 = np.array([5.0, 5.0, np.log(0.6), np.log(0.4), 0.7, 0.6, 1.5, 0.1])
+    # --- Initial Guess (Now 9 variables) ---
+    # Adjust guess based on expected magnitudes
+    y0 = np.array([10.0, 10.0,  # t_c, t_d
+                   np.log(1.0), np.log(1.0),  # log_z_c, log_z_d
+                   np.log(0.5), np.log(0.5),  # log_a_c, log_a_d (guess abatement starts lower)
+                   0.8, 1.5, 1.0])  # w, p_d, l
 
     # Solve the system
-    sol = root(system_eqns, y0, method='lm', options={'xtol': 1e-8, 'ftol': 1e-8})
+    sol = root(system_eqns, y0, method='lm', options={'ftol': 1e-20})
 
-    # --- Post-processing ---
+    # Check for convergence
     if not sol.success:
-        warnings.warn(f"Solver did not converge! Message: {sol.message}", RuntimeWarning)
-        # Return NaNs (structure matches results dict)
-        nan_results = {key: np.nan for key in [
-            "t_c", "t_d", "z_c", "z_d", "w_c", "w_d", "p_d", "l",
-            "f_c", "f_d", "c_agents", "d_agents", "l_agents", "labor_supply_agents",
-            "agg_c", "agg_d", "agg_labor_c", "agg_labor_d", "agg_labor_total",
-            "profit_c", "profit_d", "budget_errors", "utilities",
-            "wage_vector", "sol_object", "system_residuals"]}
-        nan_results["sol_object"] = sol
-        nan_results["system_residuals"] = np.full(8, np.nan)
-        for key in ["c_agents", "d_agents", "l_agents", "labor_supply_agents", "budget_errors", "utilities", "wage_vector"]:
-             nan_results[key] = np.full(n, np.nan) # n=2
-        return np.full(8, np.nan), nan_results, False
+        # print(f"Warning: Inner solver failed to converge. Message: {sol.message}") # Optional debug
+        return None, None, False
 
-
-    t_c, t_d, log_z_c, log_z_d, w_c, w_d, p_d, l = sol.x
+    # Unpack solution (Now 9 variables)
+    t_c, t_d, log_z_c, log_z_d, log_a_c, log_a_d, w, p_d, l = sol.x
     z_c = np.exp(log_z_c)
     z_d = np.exp(log_z_d)
+    a_c = np.exp(log_a_c)
+    a_d = np.exp(log_a_d)
 
-    # Recalculate production
-    f_c = (epsilon_c * (t_c**r_c) + (1 - epsilon_c) * (z_c**r_c))**(1/r_c)
-    f_d = (epsilon_d * (t_d**r_d) + (1 - epsilon_d) * (z_d**r_d))**(1/r_d)
+    # --- Recalculate quantities and checks (similar to baseline, but ensure validity) ---
+    if w <= 0 or p_d <= 0 or t_c <= 0 or t_d <= 0 or z_c <= 0 or z_d <= 0 or a_c <= 0 or a_d <= 0:
+         return None, None, False
 
-    wage_vector = np.array([w_d, w_c]) # Order [dirty, clean]
+    # Recalculate Y and f (using the solved values)
+    if np.isinf(rho_za): Y_c = (z_c**epsilon_z) * (a_c**(1 - epsilon_z)); Y_d = (z_d**epsilon_z) * (a_d**(1 - epsilon_z))
+    else: Y_c = (epsilon_z * (z_c**rho_za) + (1 - epsilon_z) * (a_c**rho_za))**(1/rho_za); Y_d = (epsilon_z * (z_d**rho_za) + (1 - epsilon_z) * (a_d**rho_za))**(1/rho_za)
+    if Y_c <= 0 or Y_d <= 0: return None, None, False
+    if np.isinf(rho): f_c = (t_c**epsilon_c) * (Y_c**(1 - epsilon_c)); f_d = (t_d**epsilon_d) * (Y_d**(1 - epsilon_d))
+    else: f_c = (epsilon_c * (t_c**rho) + (1 - epsilon_c) * (Y_c**rho))**(1/rho); f_d = (epsilon_d * (t_d**rho) + (1 - epsilon_d) * (Y_d**rho))**(1/rho)
+    if f_c <= 0 or f_d <= 0: return None, None, False
 
-    # Recalculate household variables (phi=1)
-    tau_w_d = tau_w[0]
-    tau_w_c = tau_w[1]
+    h_i = phi*w*(1-tau_w)*t + l +p_a*(np.exp(log_a_c)+np.exp(log_a_d))/5 - p_d*d0
+    if np.any(h_i <= 0): return None, None, False
+    c_agents = (alpha/(p_c*(alpha+beta+gamma))) * h_i # p_c = 1
+    d_agents = (beta/(p_d*(alpha+beta+gamma))) * h_i + d0
+    leisure_denom = (alpha+beta+gamma)*(1-tau_w)*phi*w
+    if np.any(leisure_denom <= 0): return None, None, False
+    l_agents = (gamma/leisure_denom) * h_i
 
-    # --- MODIFIED: Removed phi from calculations ---
-    Y_tilde_d = w_d * (1 - tau_w_d) * t + l - p_d * d0
-    Y_tilde_c = w_c * (1 - tau_w_c) * t + l - p_d * d0
-    denom_shares = alpha + beta + gamma
-
-    c_agent_d = (alpha / (p_c * denom_shares)) * Y_tilde_d
-    c_agent_c = (alpha / (p_c * denom_shares)) * Y_tilde_c
-    c_agents = np.array([c_agent_d, c_agent_c])
-
-    d_agent_d = (beta / (p_d * denom_shares)) * Y_tilde_d + d0
-    d_agent_c = (beta / (p_d * denom_shares)) * Y_tilde_c + d0
-    d_agents = np.array([d_agent_d, d_agent_c])
-
-    price_leisure_d = w_d * (1 - tau_w_d)
-    price_leisure_c = w_c * (1 - tau_w_c)
-    # Add checks for safety during post-processing too
-    price_leisure_d = price_leisure_d if price_leisure_d > 1e-9 else 1e-9
-    price_leisure_c = price_leisure_c if price_leisure_c > 1e-9 else 1e-9
-
-    l_agent_d = (gamma / (denom_shares * price_leisure_d)) * Y_tilde_d
-    l_agent_c = (gamma / (denom_shares * price_leisure_c)) * Y_tilde_c
-    l_agent_d = np.clip(l_agent_d, 1e-9, t - 1e-9)
-    l_agent_c = np.clip(l_agent_c, 1e-9, t - 1e-9)
-    l_agents = np.array([l_agent_d, l_agent_c])
-
-    # Labor supply (effective = actual since phi=1)
-    labor_supply_agents = t - l_agents
-    # ---------------------------------------------
+    # Check validity for utility calc
+    valid_c = np.all(c_agents > 0)
+    valid_d = np.all(d_agents > d0)
+    valid_l = np.all(l_agents > 0) and np.all(l_agents < t)
+    utilities = np.full(n, -1e9) # Default to large negative
+    if valid_c and valid_d and valid_l:
+         utilities = (alpha * np.log(c_agents) +
+                      beta * np.log(d_agents - d0) +
+                      gamma * np.log(l_agents))
 
     # Aggregates
     agg_c = np.sum(c_agents)
     agg_d = np.sum(d_agents)
-    agg_labor_c = labor_supply_agents[1] # Labor supply clean = agent C's supply
-    agg_labor_d = labor_supply_agents[0] # Labor supply dirty = agent D's supply
-    agg_labor_total = agg_labor_d + agg_labor_c
+    agg_labor = np.sum(phi*(t - l_agents))
 
     # Profits
-    profit_c = p_c * f_c - w_c * t_c - tau_z * z_c
-    profit_d = p_d * f_d - w_d * t_d - tau_z * z_d
+    profit_c = p_c * f_c - w*t_c - tau_z*z_c - p_a*a_c # p_c=1
+    profit_d = p_d * f_d - w*t_d - tau_z*z_d - p_a*a_d
 
-    # Budget errors
+    # Budgets
     budget_errors = np.zeros(n)
-    # --- MODIFIED: Removed phi from income calc ---
-    income_d = w_d * (1 - tau_w_d) * labor_supply_agents[0] + l
-    expenditure_d = p_c * c_agents[0] + p_d * d_agents[0]
-    budget_errors[0] = income_d - expenditure_d
-    income_c = w_c * (1 - tau_w_c) * labor_supply_agents[1] + l
-    expenditure_c = p_c * c_agents[1] + p_d * d_agents[1]
-    budget_errors[1] = income_c - expenditure_c
-    # ------------------------------------------
+    for i in range(n):
+        income = phi[i]*w*(1-tau_w[i])*(t - l_agents[i]) + l
+        expenditure = p_c * c_agents[i] + p_d*d_agents[i] # p_c=1
+        budget_errors[i] = income - expenditure
 
-    # Utilities
-    utilities = np.zeros(n)
-    if c_agents[0] > 1e-9 and (d_agents[0] - d0) > 1e-9 and l_agents[0] > 1e-9:
-         utilities[0] = alpha*np.log(c_agents[0]) + beta*np.log(d_agents[0]-d0) + gamma*np.log(l_agents[0])
-    else: utilities[0] = -np.inf
-    if c_agents[1] > 1e-9 and (d_agents[1] - d0) > 1e-9 and l_agents[1] > 1e-9:
-         utilities[1] = alpha*np.log(c_agents[1]) + beta*np.log(d_agents[1]-d0) + gamma*np.log(l_agents[1])
-    else: utilities[1] = -np.inf
-
-    system_residuals = system_eqns(sol.x)
-
-    # Assemble results dictionary
+    # Assemble results
     results = {
-        "t_c": t_c, "t_d": t_d, "z_c": z_c, "z_d": z_d,
-        "w_c": w_c, "w_d": w_d, "p_d": p_d, "l": l,
-        "wage_vector": wage_vector,
+        "t_c": t_c, "t_d": t_d, "z_c": z_c, "z_d": z_d, "a_c": a_c, "a_d": a_d, # Added abatement
+        "w": w, "p_d": p_d, "l": l,
         "f_c": f_c, "f_d": f_d,
-        "c_agents": c_agents,
-        "d_agents": d_agents,
-        "l_agents": l_agents,
-        "labor_supply_agents": labor_supply_agents, # Actual labor supply
-        # "eff_labor_supply_agents": REMOVED, # No longer different from labor_supply_agents
-        "agg_c": agg_c, "agg_d": agg_d,
-        "agg_labor_c": agg_labor_c,
-        "agg_labor_d": agg_labor_d,
-        "agg_labor_total": agg_labor_total,
+        "c_agents": c_agents, "d_agents": d_agents, "l_agents": l_agents,
+        "agg_c": agg_c, "agg_d": agg_d, "agg_labor": agg_labor,
         "profit_c": profit_c, "profit_d": profit_d,
         "budget_errors": budget_errors,
-        "utilities": utilities,
-        "sol_object": sol,
-        "system_residuals": system_residuals
+        "utilities": utilities, # log(u_tilde_i)
+        "sol": sol,
+        "system_residuals": sol.fun
     }
 
     return sol.x, results, sol.success
 
-# --- Example Run ---
-tau_w_example = np.array([0.10, 0.15]) # Example: [tax_d, tax_c]
-tau_z_example = 4.0
-g_example = 5.0
+# --- Example Run (Optional for testing this file directly) ---
+if __name__ == "__main__":
+    print("--- Running direct test of inner_solver.py (Baseline + Abatement) ---")
+    test_tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
+    test_tau_z = 1.0
+    test_g = 5.0
+    print(f"Using fixed parameters: p_a={p_a}, varsigma={varsigma}, epsilon_z={epsilon_z}")
+    print(f"Testing with tau_w = {test_tau_w}, tau_z = {test_tau_z}, G = {test_g}")
 
-try:
-    solution, results, converged = solve(tau_w_example, tau_z_example, g_example)
+    solution_vec, results_dict, converged_flag = solve(test_tau_w, test_tau_z, test_g)
 
-    print("\nSolver Convergence Status:", converged)
-    if results and results.get("sol_object"): # Use .get for safety
-        print("Solver Status Code:", results["sol_object"].status)
-        print("Solver Message:", results["sol_object"].message)
+    if converged_flag:
+        print("\nInner solver converged successfully.")
+        print(f"Solution vector [t_c,t_d,log_z_c,log_z_d,log_a_c,log_a_d,w,p_d,l]:\n{solution_vec}")
+        # print("\nSelected Results:")
+        # print(f"  w = {results_dict['w']:.4f}, p_d = {results_dict['p_d']:.4f}, l = {results_dict['l']:.4f}")
+        # print(f"  Pollution z_c = {results_dict['z_c']:.4f}, z_d = {results_dict['z_d']:.4f}")
+        # print(f"  Abatement a_c = {results_dict['a_c']:.4f}, a_d = {results_dict['a_d']:.4f}")
+        # print("  Household log(blue utilities):", results_dict['utilities'])
+        print(f"\nResiduals check (should be close to zero):")
+        residuals = results_dict["system_residuals"]
+        for idx, res_val in enumerate(residuals, start=1):
+            print(f"  eq{idx} residual: {res_val:.6e}")
+        print(f"\nProfits (should be near zero): Pr_c={results_dict['profit_c']:.4e}, Pr_d={results_dict['profit_d']:.4e}")
+    else:
+        print("\nInner solver FAILED to converge.")
+        if results_dict is not None and 'sol' in results_dict:
+             print(f"Solver message: {results_dict['sol'].message}")
 
-    if converged:
-        print("\nSolution vector [t_c, t_d, log_z_c, log_z_d, w_c, w_d, p_d, l]:")
-        print(solution)
-
-        print("\nProduction Summary:")
-        print(f"  Sector C: Labor Demand (t_c) = {results['t_c']:.4f}, Z Input (z_c) = {results['z_c']:.4f}, Output (f_c) = {results['f_c']:.4f}")
-        print(f"  Sector D: Labor Demand (t_d) = {results['t_d']:.4f}, Z Input (z_d) = {results['z_d']:.4f}, Output (f_d) = {results['f_d']:.4f}")
-
-        print("\nWages & Prices:")
-        print(f"  Clean Wage (w_c): {results['w_c']:.4f}")
-        print(f"  Dirty Wage (w_d): {results['w_d']:.4f}")
-        print(f"  Dirty Good Price (p_d): {results['p_d']:.4f}")
-        print(f"  Lump-sum Transfer (l): {results['l']:.4f}")
-
-        print("\nHousehold Details (Agent D: index 0, Agent C: index 1):")
-        # --- MODIFIED: Removed phi printout ---
-        print(f"  Agent D (Dirty): tau_w={tau_w_example[0]:.2f}, c={results['c_agents'][0]:.4f}, d={results['d_agents'][0]:.4f}, leisure={results['l_agents'][0]:.4f}, labor={results['labor_supply_agents'][0]:.4f}, utility={results['utilities'][0]:.4f}")
-        print(f"  Agent C (Clean): tau_w={tau_w_example[1]:.2f}, c={results['c_agents'][1]:.4f}, d={results['d_agents'][1]:.4f}, leisure={results['l_agents'][1]:.4f}, labor={results['labor_supply_agents'][1]:.4f}, utility={results['utilities'][1]:.4f}")
-        # ------------------------------------
-
-        print("\nAggregate Quantities:")
-        print(f"  Aggregate c = {results['agg_c']:.4f}")
-        print(f"  Aggregate d = {results['agg_d']:.4f}")
-        print(f"  Total Labor = {results['agg_labor_total']:.4f} (Clean: {results['agg_labor_c']:.4f}, Dirty: {results['agg_labor_d']:.4f})") # Labor = Effective Labor
-        print(f"  Aggregate Pollution (z_c+z_d) = {results['z_c'] + results['z_d']:.4f}")
-
-        print("\nChecks:")
-        print(f"  Profit C = {results['profit_c']:.4e}")
-        print(f"  Profit D = {results['profit_d']:.4e}")
-        print(f"  Budget Error (Agent D) = {results['budget_errors'][0]:.4e}")
-        print(f"  Budget Error (Agent C) = {results['budget_errors'][1]:.4e}")
-        print("\nSystem Residuals:")
-        for i, res in enumerate(results['system_residuals']):
-            print(f"  Eq {i+1}: {res:.4e}")
-
-except ValueError as ve:
-    print(f"\nError during setup: {ve}")
-except Exception as e:
-    print(f"\nAn unexpected error occurred: {e}")
-    import traceback
-    traceback.print_exc()
+    print("--- End of direct test ---")
