@@ -1,208 +1,179 @@
-# outer_solver.py (Baseline Modified for HeteroPoll + IC Constraints + Verification Fix)
-
 import numpy as np
 from scipy.optimize import minimize, NonlinearConstraint
-# Assuming inner_solver.py is in the same directory or path
-try:
-    import inner_solver as solver
-    # Import parameters needed from inner_solver
-    from inner_solver import n, alpha, beta, gamma, d0, t as T, phi, p_c # Ensure all needed params are imported
-except ImportError:
-    print("Fatal Error: Could not import 'inner_solver'.")
-    print("Ensure 'inner_solver.py' exists and is accessible.")
-    exit()
-except AttributeError as e:
-    print(f"Fatal Error: A required parameter might be missing from 'inner_solver.py': {e}")
-    exit()
+import inner_solver_ext as solver
+from inner_solver_ext import alpha, beta, gamma, d0, phi, n
 
-# --- Assert n=5 (Based on baseline phi vector) ---
-assert n == 5, "This solver expects n=5 based on the imported baseline inner_solver."
+# a. parameters
+T = 24
+# xi = 0.1 # Removed this line
+theta = 1.0
+G = 5.0
 
-# --- Parameters for Outer Solver ---
-# theta: exponent for pollution damage in SWF
-theta = 1.0 # Define theta here, assumed value from thesis/previous code
-# G: Government consumption - will be passed as argument
-# xi: Pollution aversion parameter - will be passed as argument
+# b. maximize social welfare
+def maximize_welfare(G, xi): # <-- Changed this line only
 
-# --- Social Welfare Function Maximization ---
-
-def maximize_welfare(G, xi, verify_constraints=False): # Added optional verification flag
-    """
-    Optimizes social welfare by choosing tau_w (vector, n=5) and tau_z (scalar),
-    given G and xi, subject to IC constraints.
-    Includes heterogeneous pollution effects via kappa vector.
-    Optionally verifies IC constraints at the solution if verify_constraints is True.
-    """
-
-    # Define heterogeneous pollution sensitivity parameters (kappa)
-    kappa = np.array([1.5, 1.25, 1.0, 0.75, 0.5]) # Example for n=5
-    assert len(kappa) == n, "Length of kappa vector must match number of households (n=5)"
-    sum_kappa = np.sum(kappa)
-
-    # Define the objective function (negative social welfare)
+    # b1. define objective function
     def swf_obj(x):
-        # --- (swf_obj function remains the same as in the previous version) ---
+
         tau_w = x[0:n]
         tau_z = x[n]
 
-        if tau_z <= 0: return 1e12
-
         try:
             solution, results, converged = solver.solve(tau_w, tau_z, G)
-            if not converged or results is None: return 1e10
-            utilities = results.get('utilities', None)
-            z_c = results.get('z_c', None)
-            z_d = results.get('z_d', None)
-            if utilities is None or z_c is None or z_d is None: return 1e11
-            if np.any(np.isinf(utilities)) or np.any(np.isnan(utilities)): return 1e9
-            agg_polluting = z_c + z_d
-            if agg_polluting < 0: return 1e8
-            blue_welfare_sum = np.sum(utilities)
-            green_disutility_total = sum_kappa * xi * (agg_polluting ** theta)
-            welfare = blue_welfare_sum - green_disutility_total
-            return -welfare
-        except Exception as e:
-            print(f"Error occurred in swf_obj for x={x}: {e}")
-            import traceback
-            traceback.print_exc()
-            return 1e12
-        # --- (End of swf_obj) ---
+            if not converged:
+                return 1e10  # penalize inner layer non-convergence
 
-    # Define Incentive Compatibility constraints function (nested is fine here)
+            utilities = results['utilities']
+            agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
+
+            welfare = np.sum(utilities) - 5*xi * (agg_polluting**theta)
+            return -welfare  # calculate and return negative welfare
+
+        except Exception as e:
+            print(f"Solver failed with error: {e}")
+            return 1e10  # penalize inner layer failiure
+
+    # b2. define ic constraints
     def ic_constraints(x):
-        # --- (ic_constraints function remains the same as in the previous version) ---
+
         tau_w = x[0:n]
         tau_z = x[n]
-        if tau_z <= 0: return -np.ones(n * (n - 1)) * 1e6
+
         try:
             solution, results, converged = solver.solve(tau_w, tau_z, G)
-            if not converged or results is None: return -np.ones(n * (n - 1)) * 1e6
-            l_agents = results.get('l_agents')
-            w = results.get('w')
-            c_agents = results.get('c_agents')
-            d_agents = results.get('d_agents')
-            current_utilities = results.get('utilities')
-            if l_agents is None or w is None or c_agents is None or d_agents is None or current_utilities is None:
-                 return -np.ones(n * (n - 1)) * 1e6
-            if w <= 0: return -np.ones(n * (n - 1)) * 1e6
-            if np.any(l_agents > T) or np.any(l_agents < 0): return -np.ones(n * (n - 1)) * 1e6
-            pre_tax_income_j = phi * w * (T - l_agents)
-            g_list = []
-            for i in range(n):
-                U_i = current_utilities[i]
-                if U_i <= -1e8:
-                     for j in range(n):
-                         if i != j: g_list.append(1e6)
-                     continue
-                for j in range(n):
-                    if i == j: continue
-                    c_j = c_agents[j]; d_j = d_agents[j]
-                    if phi[i] * w == 0: ell_i_j = -1
-                    else:
-                        labor_i_needed = pre_tax_income_j[j] / (phi[i] * w)
-                        ell_i_j = T - labor_i_needed
-                    if ell_i_j <= 0 or ell_i_j >= T or c_j <= 0 or d_j <= d0: U_i_j = -np.inf
-                    else:
-                        try: U_i_j = (alpha * np.log(c_j) + beta * np.log(d_j - d0) + gamma * np.log(ell_i_j))
-                        except ValueError: U_i_j = -np.inf
-                    if np.isinf(U_i_j) and U_i_j < 0: g_list.append(1e9)
-                    else: g_list.append(U_i - U_i_j)
-            return np.array(g_list)
-        except Exception as e:
-            print(f"Error evaluating IC constraints for x={x}: {e}")
-            import traceback
-            traceback.print_exc()
-            return -np.ones(n * (n - 1)) * 1e6
-        # --- (End of ic_constraints) ---
+            if not converged:
+                return -np.ones(n*(n-1)) * 1e6  # penalize inner layer non-convergence
 
-    # Create the NonlinearConstraint object
+            I = np.zeros(n)
+            for j in range(n):
+                I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] # compute income for hh j
+
+            g_list = []
+
+            for i in range(n):
+                U_i = results['utilities'][i]
+                for j in range(n):
+                    if i == j:
+                        continue
+
+                    c_j = results['c_agents'][j]
+                    d_j = results['d_agents'][j] # retrieve consumption for hh j
+
+                    denom = (1.0 - tau_w[j]) * phi[i] * results['w']
+                    if denom == 0: # ial: changed from "<=0" to only avoid division by zero
+                        g_list.append(-1e6)
+                        continue
+
+                    ell_i_j = T - I[j] / denom # comute leisure for hh i pretending to be hh j
+
+                    if ell_i_j <= 0:
+                        U_i_j = -1e6 # throw away corner solutions
+                    else:
+                        if c_j <= 0 or d_j <= d0:
+                            U_i_j = -1e6 # throw away corner solutions
+                        else:
+                            U_i_j = (alpha * np.log(c_j) +
+                                     beta * np.log(d_j - d0) +
+                                     gamma * np.log(ell_i_j)) # calculate utility for hh i pretending to be hh j
+
+                    g_list.append(U_i - U_i_j) # return two ic constraints for each pair of hh
+
+            return np.array(g_list)
+
+        except Exception as e:
+            print(f"ic constraint evaluation failed with error: {e}")
+            return -np.ones(n*(n-1)) * 1e6  # penzlize if ic constraints cannot be evaluated
+
+    # b3. define ic constraints as a nonlinear constraint
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
-    # Initial guess
-    initial_tau_w = np.zeros(n)
-    initial_tau_z = 1.0
-    initial_guess = np.concatenate([initial_tau_w, [initial_tau_z]])
+    # b4. initial guess.
+    initial_tau_w = [(0.0)]*n # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
+    initial_tau_z = 0.5
+    initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
-    # Bounds
-    tau_w_bounds = [(-10.0, 10.0)] * n
-    tau_z_bounds = [(1e-6, 100.0)]
-    bounds = tau_w_bounds + tau_z_bounds
+    # b5. bounds for tax rates
+    bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
 
-    # Perform optimization
-    optimal_tau_w = None
-    optimal_tau_z = None
-    max_welfare_value = None
-    try:
-        result = minimize(
-            swf_obj,
-            initial_guess,
-            method='SLSQP',
-            bounds=bounds,
-            constraints=[nonlinear_constraint], # Include IC constraints
-            options={'disp': False, 'ftol': 1e-7, 'maxiter': 500}
-        )
+    # b6. minimize negative welfare using slsqp
+    result = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=[nonlinear_constraint])
 
-        if result.success:
-            optimal_tau_w = result.x[0:n]
-            optimal_tau_z = result.x[n]
-            max_welfare_value = -result.fun
+    # b7. print results
+    if result.success:
+        opt_tau_w = result.x[0:n]
+        opt_tau_z = result.x[n]
+        max_welfare = -result.fun
 
-            # --- MOVED VERIFICATION LOGIC HERE ---
-            if verify_constraints:
-                print(f"\n--- Verifying results for G={G}, xi={xi} ---")
-                try:
-                    solution_final, results_final, converged_final = solver.solve(optimal_tau_w, optimal_tau_z, G)
-                    if converged_final and results_final is not None:
-                        print("  Inner solver converged successfully at the optimum.")
-                        # Verify IC constraints at the solution using the *local* ic_constraints function
-                        ic_values_final = ic_constraints(result.x) # Use result.x directly
-                        if np.all(ic_values_final >= -1e-6): # Allow small tolerance
-                             print("  IC constraints appear satisfied at the optimum.")
-                        else:
-                             print("  WARNING: IC constraints appear VIOLATED at the optimum.")
-                             # print(f"  IC values: {ic_values_final}") # Optional detail
-                    else:
-                        print("  Warning: Inner solver FAILED to converge at the found optimum during verification.")
-                except Exception as e_verify:
-                   print(f"  Error during verification step: {e_verify}")
-                print("--- End Verification ---")
-            # --- END OF MOVED VERIFICATION ---
-
-        else:
-            print(f"Optimization failed for G={G}, xi={xi} (IC Constraints ON, HeteroPoll)")
-            print(f"Message: {result.message}")
-            # Return None if failed
-            optimal_tau_w = None
-            optimal_tau_z = None
-            max_welfare_value = None
-
-    except Exception as e:
-        print(f"Fatal error during optimization call for G={G}, xi={xi}: {e}")
-        import traceback
-        traceback.print_exc()
-        # Ensure None is returned on fatal error
-        optimal_tau_w = None
-        optimal_tau_z = None
-        max_welfare_value = None
-
-    return optimal_tau_w, optimal_tau_z, max_welfare_value # Return results or None
-
-
-# --- Example Usage (Optional for testing this file directly) ---
-if __name__ == "__main__":
-    print("--- Running direct test of outer_solver.py (Baseline + HeteroPoll + IC Constraints + Fix) ---")
-    G_test = 5.0
-    xi_test = 0.1 # Example value
-
-    print(f"Attempting optimization for G={G_test}, xi={xi_test} with verification...")
-    # Call with verify_constraints=True
-    opt_w, opt_z, max_sw = maximize_welfare(G_test, xi_test, verify_constraints=True)
-
-    if opt_w is not None:
-        print("\nOptimization Test Completed Successfully (details in verification block above):")
-        print(f"  Optimal tau_w: {opt_w}")
-        print(f"  Optimal tau_z: {opt_z}")
-        print(f"  Maximized SWF: {max_sw}")
+        print("social welfare maximization successful")
+        print("optimal tau_w:", opt_tau_w)
+        print("optimal tau_z:", opt_tau_z)
+        print("maximized Social Welfare:", max_welfare)
+        return opt_tau_w, opt_tau_z, max_welfare
     else:
-        print("\nOptimization Test Failed.")
-    print("--- End of direct test ---")
+        print("optimization failed")
+        print("message:", result.message)
+        return None, None, None
+
+# c. run optimization
+xi_example_value = 0.1 # Or any other example value you want to test
+optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value)
+
+if optimal_tau_w is not None:
+    print("\nresults at optimal tax rates:")
+    solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G)
+
+    if converged:
+        print("solution status:", results["sol"].status)
+        print("solution message:", results["sol"].message)
+        print("solution vector [T_C, T_D, Z_C, Z_D, w, p_D, L]:")
+        print(solution)
+
+        print("\nproduction Summary:")
+        print(f"sector C: T_prod = {results['t_c']:.4f}, z_c = {results['z_c']:.4f}")
+        print(f"sector D: T_prod = {results['t_d']:.4f}, z_d = {results['z_d']:.4f}")
+        print(f"common wage, w = {results['w']:.4f}, p_D = {results['p_d']:.4f}")
+        print(f"sector C output, F_C = {results['f_c']:.4f}")
+        print(f"sector D output, F_D = {results['f_c']:.4f}")
+
+        print("\nhousehold Demands and Leisure:")
+        for i in range(n):
+            print(f"household {i+1}: c = {results['c_agents'][i]:.4f}, D = {results['d_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
+
+        print("\naggregated Quantities:")
+        print(f"aggregate c = {results['agg_c']:.4f}")
+        print(f"aggregate d = {results['agg_d']:.4f}")
+        print(f"aggregate labor supply = {results['agg_labor']:.4f}")
+
+        print("\nlump sum:")
+        print(f"l = {results['l']:.4f}")
+
+        print("\nfirm profits:")
+        print(f"profit c: {results['profit_c']:.4f}")
+        print(f"profit d: {results['profit_d']:.4f}")
+
+        print("\nhousehold budget constraints:")
+        for i in range(n):
+            print(f"household {i+1}: error = {results['budget_errors'][i]:.10f}")
+
+        print(f"\ngood c market clearing residual: {(results['agg_c'] + 0.5*G) - results['f_c']:.10f}")
+    else:
+        print("inner solver did not converge at optimal tax rates")
+
+    agg_polluting = results['z_c'] + results['z_d']
+effective_utilities = results['utilities']
+
+# Define a function to compute the Gini coefficient
+def gini(array):
+    # Convert to numpy array and flatten
+    array = np.array(array).flatten()
+    # Sort the array
+    sorted_array = np.sort(array)
+    n = array.size
+    # Create index numbers (1-indexed)
+    index = np.arange(1, n+1)
+    # Compute Gini coefficient using the standard formula
+    return (np.sum((2 * index - n - 1) * sorted_array)) / (n * np.sum(sorted_array))
+
+# Calculate the Gini coefficient for effective utilities
+gini_value = gini(effective_utilities)
+print("Gini coefficient in effective utility:", gini_value)

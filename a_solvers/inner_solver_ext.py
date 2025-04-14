@@ -18,7 +18,7 @@ n = len(phi)      # Number of households/types
 
 # b. New parameters for Abatement extension
 # Calibrate p_a once offline, then use the value here
-p_a = 15.0        # <<<<<<<< USER: SET YOUR CALIBRATED ABATEMENT PRICE HERE >>>>>>>>
+p_a = 2.0        # <<<<<<<< USER: SET YOUR CALIBRATED ABATEMENT PRICE HERE >>>>>>>>
 varsigma = 1.5    # Elasticity varsigma (ς) between pollution (z) and abatement (a)
 epsilon_z = 0.7   # Share parameter for pollution (z) in the z/a nest (must be 0 < eps_z < 1)
 
