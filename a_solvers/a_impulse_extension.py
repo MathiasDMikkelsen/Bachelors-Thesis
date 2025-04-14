@@ -22,7 +22,7 @@ tau_w_new = np.array([-1.08858208, -0.04377549,  0.22144972,  0.39697164,  0.640
 g = 5.0
 
 # b. Range for tau_z
-tau_z_values = np.linspace(1.0, 10.0, 25) # Adjusted range from user code
+tau_z_values = np.linspace(1.0, 5.0, 25) # Adjusted range from user code
 
 # Prepare storage lists
 t_c_orig=[]; t_d_orig=[]; z_c_orig=[]; z_d_orig=[]; a_c_orig=[]; a_d_orig=[]; w_orig=[]; p_d_orig=[]; l_agents_orig=[]; c_agents_orig=[]; d_agents_orig=[]
