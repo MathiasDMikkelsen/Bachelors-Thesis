@@ -88,7 +88,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
     # b4. initial guess.
-    initial_tau_w = [(0.0)]*n # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
+    initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
     initial_tau_z = 0.5
     initial_guess = np.array(initial_tau_w + [initial_tau_z])
 
@@ -115,7 +115,7 @@ def maximize_welfare(G, xi): # <-- Changed this line only
         return None, None, None
 
 # c. run optimization
-xi_example_value = 0.1 # Or any other example value you want to test
+xi_example_value = 0.01 # Or any other example value you want to test
 optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value)
 
 if optimal_tau_w is not None:

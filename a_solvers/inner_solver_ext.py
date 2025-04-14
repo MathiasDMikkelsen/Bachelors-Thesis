@@ -14,12 +14,13 @@ epsilon_d = 0.92  # Labor share parameter for dirty firm (top level)
 sigma = 0.5       # Elasticity sigma (top level, labor vs composite Z/A)
 p_c = 1.0         # Numeraire
 phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.511])
+varphi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
 n = len(phi)      # Number of households/types
 
 # b. New parameters for Abatement extension
-# Calibrate p_a once offline, then use the value here
-p_a = 2.0        # <<<<<<<< USER: SET YOUR CALIBRATED ABATEMENT PRICE HERE >>>>>>>>
-varsigma = 1.5    # Elasticity varsigma (ς) between pollution (z) and abatement (a)
+# Calibrate p_a once offline, then use the value here       # <<<<<<<< USER: SET YOUR CALIBRATED ABATEMENT PRICE HERE >>>>>>>>
+p_a = 15.0
+varsigma = 2.0   # Elasticity varsigma (ς) between pollution (z) and abatement (a)
 epsilon_z = 0.7   # Share parameter for pollution (z) in the z/a nest (must be 0 < eps_z < 1)
 
 # c. Define rho values from elasticities for convenience
@@ -31,6 +32,7 @@ if sigma == 1.0: rho = -np.inf # Handle Cobb-Douglas case if needed (though rho 
 if varsigma == 1.0: rho_za = -np.inf # Handle Cobb-Douglas case if needed
 
 def solve(tau_w, tau_z, g):
+    
     """
     Solves the inner system for general equilibrium with abatement.
     tau_w: array of length n for proportional income tax rates
@@ -42,6 +44,7 @@ def solve(tau_w, tau_z, g):
     assert 0 < epsilon_z < 1, "epsilon_z must be between 0 and 1"
 
     def system_eqns(y):
+        
         """Defines the system of 9 equilibrium equations."""
         # Unpack unknowns: Now includes log_a_c, log_a_d
         t_c, t_d, log_z_c, log_z_d, log_a_c, log_a_d, w, p_d, l = y
@@ -163,7 +166,7 @@ def solve(tau_w, tau_z, g):
     else: f_c = (epsilon_c * (t_c**rho) + (1 - epsilon_c) * (Y_c**rho))**(1/rho); f_d = (epsilon_d * (t_d**rho) + (1 - epsilon_d) * (Y_d**rho))**(1/rho)
     if f_c <= 0 or f_d <= 0: return None, None, False
 
-    h_i = phi*w*(1-tau_w)*t + l +p_a*(np.exp(log_a_c)+np.exp(log_a_d))/5 - p_d*d0
+    h_i = phi*w*(1-tau_w)*t + l +p_a*(np.exp(log_a_c)+np.exp(log_a_d))*varphi - p_d*d0
     if np.any(h_i <= 0): return None, None, False
     c_agents = (alpha/(p_c*(alpha+beta+gamma))) * h_i # p_c = 1
     d_agents = (beta/(p_d*(alpha+beta+gamma))) * h_i + d0
