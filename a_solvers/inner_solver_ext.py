@@ -92,7 +92,7 @@ def solve(tau_w, tau_z, g):
         if f_c <= 0 or f_d <= 0: return np.ones(9) * 1e6 # Output must be positive
 
         # --- Household Behavior (Unchanged) ---
-        h_i = phi*w*(1-tau_w)*t + l - p_d*d0
+        h_i = phi*w*(1-tau_w)*t + l +(np.exp(log_a_d)+np.exp(log_a_c))*varphi*p_a - p_d*d0
         if np.any(h_i <= 0): return np.ones(9) * 1e6
         d_agents = (beta/(p_d*(alpha+beta+gamma))) * h_i + d0
         leisure_denom = (alpha+beta+gamma)*(1-tau_w)*phi*w
@@ -166,7 +166,7 @@ def solve(tau_w, tau_z, g):
     else: f_c = (epsilon_c * (t_c**rho) + (1 - epsilon_c) * (Y_c**rho))**(1/rho); f_d = (epsilon_d * (t_d**rho) + (1 - epsilon_d) * (Y_d**rho))**(1/rho)
     if f_c <= 0 or f_d <= 0: return None, None, False
 
-    h_i = phi*w*(1-tau_w)*t + l +p_a*(np.exp(log_a_c)+np.exp(log_a_d))*varphi - p_d*d0
+    h_i = phi*w*(1-tau_w)*t + l +(np.exp(log_a_d)+np.exp(log_a_c))*varphi*p_a - p_d*d0
     if np.any(h_i <= 0): return None, None, False
     c_agents = (alpha/(p_c*(alpha+beta+gamma))) * h_i # p_c = 1
     d_agents = (beta/(p_d*(alpha+beta+gamma))) * h_i + d0
@@ -196,7 +196,7 @@ def solve(tau_w, tau_z, g):
     # Budgets
     budget_errors = np.zeros(n)
     for i in range(n):
-        income = phi[i]*w*(1-tau_w[i])*(t - l_agents[i]) + l
+        income = phi[i]*w*(1-tau_w[i])*(t - l_agents[i]) + l + (np.exp(log_a_d)+np.exp(log_a_c))*varphi[i]*p_a
         expenditure = p_c * c_agents[i] + p_d*d_agents[i] # p_c=1
         budget_errors[i] = income - expenditure
 
@@ -220,7 +220,7 @@ def solve(tau_w, tau_z, g):
 if __name__ == "__main__":
     print("--- Running direct test of inner_solver.py (Baseline + Abatement) ---")
     test_tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-    test_tau_z = 1.0
+    test_tau_z = 3.0
     test_g = 5.0
     print(f"Using fixed parameters: p_a={p_a}, varsigma={varsigma}, epsilon_z={epsilon_z}")
     print(f"Testing with tau_w = {test_tau_w}, tau_z = {test_tau_z}, G = {test_g}")

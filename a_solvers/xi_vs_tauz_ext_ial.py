@@ -20,7 +20,7 @@ fixed_tau_w_optimal_xi01 = np.array([-1.08858208, -0.04377549,  0.22144972,  0.3
 
 # Define the range and number of xi values to test
 # Using the xi_values from your previous code version
-xi_values = np.linspace(0.01, 1.0, 30)
+xi_values = np.linspace(0.01, 4.0, 10)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---
