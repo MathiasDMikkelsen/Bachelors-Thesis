@@ -27,7 +27,7 @@ G_value = 5.0
 theta = 1.0 # Pollution exponent in SWF
 
 # Define the range and number of xi values to test
-xi_values = np.linspace(0.1, 0.5, 5) # Start from xi=0.0 for broader range, 11 points
+xi_values = np.linspace(0.1, 3.0, 50) # Start from xi=0.0 for broader range, 11 points
 
 # --- Determine Fixed tau_w arrays for Scenarios 2 & 3 ---
 
@@ -73,7 +73,7 @@ def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
 
             agg_polluting = results['z_c'] + results['z_d']
             # Using SWF from outer_solver
-            welfare = np.sum(utilities) - 2*xi_val * (agg_polluting**theta)
+            welfare = np.sum(utilities) - 5*xi_val * (agg_polluting**theta)
             return -welfare
         except Exception as e:
             # Catch potential errors during inner solve
@@ -204,18 +204,18 @@ valid_fixed_scen3_indices = ~np.isnan(tau_z_fixed_scenario3_results)
 if np.any(valid_opt_indices):
     plt.plot(valid_xi_optimal_w[valid_opt_indices],
              tau_z_optimal_w_results[valid_opt_indices],
-             linestyle='-', marker='o', markersize=4, label='Variable $\\tau_w$')
+             linestyle='-', markersize=4, label='Variable $\\tau_w$')
 
 if np.any(valid_fixed_scen2_indices):
     plt.plot(valid_xi_fixed_scenario2[valid_fixed_scen2_indices],
              tau_z_fixed_scenario2_results[valid_fixed_scen2_indices],
-             linestyle='--', marker='s', markersize=4, label=f'Fixed $\\tau_w$ (Set A: {fixed_tau_w_scenario2})') # Updated label
+             linestyle='--', markersize=4, label=f'Fixed $\\tau_w$ (Set A: {fixed_tau_w_scenario2})') # Updated label
 
 if fixed_tau_w_scenario3 is not None and np.any(valid_fixed_scen3_indices):
     label_scen3 = f'Fixed $\\tau_w$ (Set B: Opt @ $\\xi$={xi_for_fixed_opt})'
     plt.plot(valid_xi_fixed_scenario3[valid_fixed_scen3_indices],
              tau_z_fixed_scenario3_results[valid_fixed_scen3_indices],
-             linestyle=':', marker='^', markersize=4, label=label_scen3)
+             linestyle=':', markersize=4, label=label_scen3)
 
 # Add labels and title
 plt.xlabel(r'Pollution Aversion ($\xi$)', fontsize=12)

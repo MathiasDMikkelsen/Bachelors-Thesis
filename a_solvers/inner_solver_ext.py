@@ -7,11 +7,11 @@ alpha = 0.7
 beta = 0.2
 gamma = 0.2
 r_c = -1.0 # Example for clean sector
-r_d = -0.5 # Example for dirty sector
+r_d = -1.0 # Example for dirty sector
 t = 24.0
 d0 = 0.5
-epsilon_c = 0.995
-epsilon_d = 0.92
+epsilon_c = 0.9
+epsilon_d = 0.45
 p_c = 1.0 # Numeraire
 
 # --- MODIFIED: Define parameters for 2 households (n=2) ---

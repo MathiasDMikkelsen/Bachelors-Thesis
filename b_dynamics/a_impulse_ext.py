@@ -2,30 +2,17 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 import sys
 import os
-import warnings
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+import a_solvers.inner_solver_ext as solver # Use alias solver
+from a_solvers.inner_solver_ext import n
 
 # --- MODIFIED: Import correct 2-hh inner solver ---
-try:
-    # Assuming the inner solver is in a subdirectory 'a_solvers' relative to script's parent
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    solver_path = os.path.join(project_root, 'a_solvers')
-    if solver_path not in sys.path:
-        sys.path.insert(0, solver_path)
-    import inner_solver_ext as solver # Use alias solver
-    # Import n=2 if needed elsewhere, but solver function is primary use
-    from inner_solver_ext import n
-    assert n == 2, "Loaded inner solver is not for n=2 households."
-except (ImportError, ModuleNotFoundError):
-    print("Error: Could not import 'inner_solver_ext'.")
-    print("Ensure 'inner_solver_ext.py' exists in the 'a_solvers' directory relative to this script's parent directory.")
-    sys.exit(1)
-except FileNotFoundError:
-     print("Warning: Could not automatically determine project root. Assuming solver is importable.")
-     import inner_solver_ext as solver
-     from inner_solver_ext import n
-     assert n == 2, "Loaded inner solver is not for n=2 households."
+
 # ---------------------------------------------------
 
 # a. Set policies for 2 households [tau_w_d, tau_w_c]
@@ -36,7 +23,7 @@ tau_w_policy_b = np.array([0.05, 0.20]) # Example Policy B
 g = 5.0
 
 # b. Range for tau_z
-tau_z_values = np.linspace(0.1, 20.0, 50)
+tau_z_values = np.linspace(0.1, 4.0, 50)
 
 # Prepare storage lists for the two policy scenarios:
 # Policy A results

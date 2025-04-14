@@ -16,7 +16,7 @@ try:
         sys.path.insert(0, solver_path)
     import inner_solver_ext as solver # Use alias solver
     # Import necessary params from the 2-hh inner solver
-    from inner_solver_ext import n, alpha, beta, gamma, d0, t as T
+    from a_solvers.inner_solver_ext import n, alpha, beta, gamma, d0, t as T
     assert n == 2, "Loaded inner solver is not for n=2 households."
 except (ImportError, ModuleNotFoundError):
     print("Error: Could not import 'inner_solver_ext'.")
@@ -24,8 +24,8 @@ except (ImportError, ModuleNotFoundError):
     sys.exit(1)
 except FileNotFoundError:
      print("Warning: Could not automatically determine project root. Assuming solver is importable.")
-     import inner_solver_ext as solver
-     from inner_solver_ext import n
+     import a_solvers.inner_solver_ext as solver
+     from a_solvers.inner_solver_ext import n
      assert n == 2, "Loaded inner solver is not for n=2 households."
 # -----------------------------------------------------------
 

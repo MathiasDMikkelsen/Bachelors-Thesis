@@ -62,7 +62,7 @@ def maximize_welfare(target_G, xi):
 
             # Calculate SWF (ensure consistency with thesis/model, e.g., log utility)
             # Using sum(util) - penalty form provided previously
-            welfare = np.sum(utilities) - 2*xi * (agg_polluting**theta) # Factor 5 was in prev code
+            welfare = np.sum(utilities) - 5*xi * (agg_polluting**theta) # Factor 5 was in prev code
             return -welfare
 
         except Exception as e:
@@ -195,7 +195,7 @@ def maximize_welfare(target_G, xi):
                      initial_guess,
                      method='SLSQP',
                      bounds=bounds,
-                     constraints=[nonlinear_constraint],
+                     #constraints=[nonlinear_constraint],
                      options=options)
 
     # b7. print and return results
