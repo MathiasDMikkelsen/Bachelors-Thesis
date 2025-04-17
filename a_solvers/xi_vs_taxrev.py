@@ -13,7 +13,7 @@ G_value = 5.0
 # *** Ensure theta is defined locally ***
 theta = 1.0
 # Set xi_values as requested
-xi_values = np.linspace(0.001, 1.0, 25) # Using the value from the previous working version
+xi_values = np.linspace(0.1, 1.0, 25) # Using the value from the previous working version
 # --- End Simulation Parameters ---
 
 # Lists to store results
@@ -83,7 +83,7 @@ revenue_total_tax_results = np.array(revenue_total_tax_results)
 valid_xi_values = np.array(valid_xi_values)
 
 # Create the plot
-plt.figure(figsize=(5, 3.5))
+plt.figure(figsize=(7, 5))
 
 # Plot Lines - Filter NaNs
 valid_env_indices = ~np.isnan(revenue_env_tax_results)
@@ -97,21 +97,21 @@ color_inc = 'tab:red'
 if np.any(valid_env_indices):
     plt.plot(valid_xi_values[valid_env_indices],
              revenue_env_tax_results[valid_env_indices],
-             linestyle='--', color=color_env, label='Env. Tax Revenue')
+             linestyle='--', color=color_env, label='Env. tax revenue')
 
 if np.any(valid_inc_indices):
     plt.plot(valid_xi_values[valid_inc_indices],
              revenue_inc_tax_results[valid_inc_indices],
-             linestyle=':', color=color_inc, label='Income Tax Revenue')
+             linestyle=':', color=color_inc, label='Income tax revenue')
 
 if np.any(valid_tot_indices):
     plt.plot(valid_xi_values[valid_tot_indices],
              revenue_total_tax_results[valid_tot_indices],
-             linestyle='-', color=color_total, label='Total Tax Revenue', linewidth=2)
+             linestyle='-',, color=color_total, label='Total revenue', linewidth=2)
 
 # Add labels
 plt.xlabel(r'$\xi$', fontsize=14)
-plt.ylabel('Total Revenue', fontsize=14)
+plt.ylabel('Revenue', fontsize=14)
 
 # Add legend *** Changed location ***
 if np.any(valid_env_indices) or np.any(valid_inc_indices) or np.any(valid_tot_indices):
@@ -121,10 +121,10 @@ if np.any(valid_env_indices) or np.any(valid_inc_indices) or np.any(valid_tot_in
 plt.tight_layout()
 
 # Save the figure
-output_dir = "xi_sensitivity_graphs"
+output_dir = "c_opttax"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-output_path = os.path.join(output_dir, "revenue_comparison_plot_total.pdf")
+output_path = os.path.join(output_dir, "f_xi_taxrev.pdf")
 plt.savefig(output_path)
 print(f"\nPlot saved to {output_path}")
 

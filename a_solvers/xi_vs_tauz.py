@@ -3,8 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-import outer_labor as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
-import inner_labor as solver # Import inner solver directly too
+import outer_solver as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
+import inner_solver as solver # Import inner solver directly too
 # Removed theta from import, defined locally below
 from inner_solver import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
 import os # For saving figure
@@ -142,7 +142,7 @@ tau_z_fixed_optimal_xi01_results = np.array(tau_z_fixed_optimal_xi01_results) # 
 valid_xi_fixed_optimal_xi01 = np.array(valid_xi_fixed_optimal_xi01) # Added
 
 # Create the plot
-plt.figure(figsize=(5, 3.5))
+plt.figure(figsize=(7, 5))
 
 # Plot Lines - Filter NaNs and update labels
 valid_opt_indices = ~np.isnan(tau_z_optimal_w_results)
@@ -152,17 +152,17 @@ valid_fixed_opt01_indices = ~np.isnan(tau_z_fixed_optimal_xi01_results)
 if np.any(valid_opt_indices):
     plt.plot(valid_xi_optimal_w[valid_opt_indices],
              tau_z_optimal_w_results[valid_opt_indices],
-             linestyle='-', label='Variable $\\tau_w$') # Updated label
+             linestyle='-', linewidth=2, label='Variable $\\tau_w$') # Updated label
 
 if np.any(valid_fixed_pre_indices):
     plt.plot(valid_xi_fixed_preexisting[valid_fixed_pre_indices],
              tau_z_fixed_preexisting_results[valid_fixed_pre_indices],
-             linestyle='--', label='Fixed $\\tau_w$ (Pre-existing)') # Updated label
+             linestyle='--', linewidth=2, label='Fixed $\\tau_w$ (Pre-existing)') # Updated label
 
 if np.any(valid_fixed_opt01_indices):
     plt.plot(valid_xi_fixed_optimal_xi01[valid_fixed_opt01_indices],
              tau_z_fixed_optimal_xi01_results[valid_fixed_opt01_indices],
-             linestyle=':', label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)') # Added line and label
+             linestyle=':', linewidth=2, label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)') # Added line and label
 
 # Add labels
 plt.xlabel(r'$\xi$', fontsize=14)
@@ -175,12 +175,13 @@ if np.any(valid_opt_indices) or np.any(valid_fixed_pre_indices) or np.any(valid_
 
 # Apply tight layout
 plt.tight_layout()
+plt.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 
 # Save the figure
-output_dir = "xi_sensitivity_graphs" # Save in sub-folder relative to script execution
+output_dir = "c_opttax" # Save in sub-folder relative to script execution
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-output_path = os.path.join(output_dir, "tau_z_comparison_3_scenarios.pdf") # New filename
+output_path = os.path.join(output_dir, "e_xi_tauz.pdf") # New filename
 plt.savefig(output_path)
 print(f"\nPlot saved to {output_path}")
 

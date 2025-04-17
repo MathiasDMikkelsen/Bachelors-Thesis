@@ -86,31 +86,29 @@ for i in range(len(tau_z_smooth) - 1):
         break
 
 # --- Plotting ---
-plt.figure(figsize=(8, 6))
-plt.plot(tau_z_smooth, agg_diff_sys1_smooth, color='tab:blue', linewidth=2,
-         label='Tax System 1')
-plt.plot(tau_z_smooth, agg_diff_sys2_smooth, color='tab:red', linewidth=2,
-         label='Tax System 2')
+plt.figure(figsize=(7, 5))
+plt.plot(tau_z_smooth, agg_diff_sys1_smooth, color='tab:orange', linewidth=2, linestyle= '--',
+         label=r'Pre-existing $\tau_w$')
+plt.plot(tau_z_smooth, agg_diff_sys2_smooth, color='tab:green', linewidth=2, linestyle= 'dotted',
+         label=r'Optimal $\tau_w$ (at $\xi=0.1$)')
 
 # Add horizontal line at 0 for reference.
-plt.axhline(0, color='grey', linestyle='--', linewidth=1)
+plt.axhline(0, linewidth=2.0 ,color='grey', linestyle='--')
 
 # Mark the tax level where the slopes are equal.
 if tau_z_equal_slope is not None:
-    plt.axvline(tau_z_equal_slope, color='grey', linestyle='--', linewidth=1)
-    plt.plot(tau_z_equal_slope, spline_sys1(tau_z_equal_slope), marker='o', color='grey',
-             markersize=8, label=f'Equal Slope @ τ_z ≈ {tau_z_equal_slope:.2f}')
-    plt.text(tau_z_equal_slope, spline_sys1(tau_z_equal_slope) + 0.02,
-             f'{tau_z_equal_slope:.2f}', color='grey', fontsize=12,
-             ha='center', va='bottom')
+    plt.axvline(tau_z_equal_slope, color='salmon', linestyle='-', linewidth=2)
+    plt.plot(tau_z_equal_slope, spline_sys1(tau_z_equal_slope), marker='o', color='salmon',
+             markersize=6, label=rf'Equal slope at $\tau_z$ ≈ {tau_z_equal_slope:.2f}')
+    plt.plot(tau_z_equal_slope, spline_sys2(tau_z_equal_slope), marker='o', color='salmon',
+             markersize=6)
 
-plt.xlabel(r'$\tau_z$', fontsize=12)
-plt.ylabel('Aggregate Change in Log Utility', fontsize=12)
-plt.title('Aggregate Change and Slope Equality Across Households', fontsize=14)
-plt.legend(fontsize=12, loc='best')
-plt.grid(True)
+plt.xlabel(r'$\tau_z$', fontsize=14)
+plt.ylabel(r'$\Delta \sum \log \tilde{u}_i$', fontsize=14)
+plt.legend(fontsize=10, loc='best')
+plt.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 plt.tight_layout()
-plt.savefig("b_dynamics/x_bluesw1.pdf")
+plt.savefig("c_opttax/g_bluewelfare.pdf")
 plt.show()
 
 if tau_z_equal_slope is not None:
