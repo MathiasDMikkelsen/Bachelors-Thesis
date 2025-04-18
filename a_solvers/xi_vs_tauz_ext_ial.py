@@ -20,7 +20,7 @@ fixed_tau_w_optimal_xi01 = np.array([-1.08858208, -0.04377549,  0.22144972,  0.3
 
 # Define the range and number of xi values to test
 # Using the xi_values from your previous code version
-xi_values = np.linspace(0.01, 4.0, 10)
+xi_values = np.linspace(0.1, 1.0, 25)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---
@@ -142,7 +142,7 @@ tau_z_fixed_optimal_xi01_results = np.array(tau_z_fixed_optimal_xi01_results) # 
 valid_xi_fixed_optimal_xi01 = np.array(valid_xi_fixed_optimal_xi01) # Added
 
 # Create the plot
-plt.figure(figsize=(5, 3.5))
+plt.figure(figsize=(7, 5))
 
 # Plot Lines - Filter NaNs and update labels
 valid_opt_indices = ~np.isnan(tau_z_optimal_w_results)
@@ -172,6 +172,8 @@ plt.ylabel(r'$\tau_z$', fontsize=14)
 # Check if at least one line has valid data
 if np.any(valid_opt_indices) or np.any(valid_fixed_pre_indices) or np.any(valid_fixed_opt01_indices):
     plt.legend(loc='best') # Changed loc back to 'best' for potentially 3 lines
+    
+plt.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 
 # Apply tight layout
 plt.tight_layout()
@@ -180,7 +182,7 @@ plt.tight_layout()
 output_dir = "xi_sensitivity_graphs" # Save in sub-folder relative to script execution
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-output_path = os.path.join(output_dir, "tau_z_comparison_3_scenarios.pdf") # New filename
+output_path = os.path.join(output_dir, "xi_tauz_ext.pdf") # New filename
 plt.savefig(output_path)
 print(f"\nPlot saved to {output_path}")
 
