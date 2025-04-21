@@ -107,7 +107,7 @@ if np.any(valid_inc_indices):
 if np.any(valid_tot_indices):
     plt.plot(valid_xi_values[valid_tot_indices],
              revenue_total_tax_results[valid_tot_indices],
-             linestyle='-',, color=color_total, label='Total revenue', linewidth=2)
+             linestyle='-', color=color_total, label='Total revenue', linewidth=2)
 
 # Add labels
 plt.xlabel(r'$\xi$', fontsize=14)
