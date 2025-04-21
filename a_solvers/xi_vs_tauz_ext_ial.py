@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 import outer_solver_ext as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
 import inner_solver_ext as solver # Import inner solver directly too
 # Removed theta from import, defined locally below
-from inner_solver import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
+from inner_solver_ext import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
 import os # For saving figure
 
 # --- Simulation Parameters ---
@@ -20,7 +20,7 @@ fixed_tau_w_optimal_xi01 = np.array([-1.08858208, -0.04377549,  0.22144972,  0.3
 
 # Define the range and number of xi values to test
 # Using the xi_values from your previous code version
-xi_values = np.linspace(0.1, 1.0, 25)
+xi_values = np.linspace(0.1, 1.0, 20)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---
@@ -43,7 +43,7 @@ def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
             return 1e10
 
     tau_z_bounds = [(1e-6, 100.0)]
-    initial_tau_z_guess = [0.5]
+    initial_tau_z_guess = [1.0]
     try:
         result = minimize(swf_obj_fixed_w,
                           initial_tau_z_guess,
@@ -54,6 +54,7 @@ def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
         if result.success:
             return result.x[0], -result.fun
         else:
+            print("FAILIURE")
             return None, None
     except Exception as e:
         return None, None

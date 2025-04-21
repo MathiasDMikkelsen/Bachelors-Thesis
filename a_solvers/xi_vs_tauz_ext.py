@@ -9,7 +9,7 @@ import warnings # To potentially ignore specific warnings during optimization
 # --- MODIFIED: Import correct baseline solvers and parameters ---
 try:
     # Import the baseline outer solver (n=5, IC constraints, HeteroPoll)
-    import outer_solver as outer_solver
+    import outer_solver_ext as outer_solver
     # Import the baseline inner solver (n=5)
     import inner_solver as solver
     # Import necessary params from the baseline inner solver
