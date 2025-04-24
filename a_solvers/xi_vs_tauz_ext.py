@@ -5,6 +5,17 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 import os # For saving figure
 import warnings # To potentially ignore specific warnings during optimization
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
 
 # --- MODIFIED: Import correct baseline solvers and parameters ---
 try:
@@ -258,6 +269,8 @@ plt.xticks(fontsize=10)
 plt.yticks(fontsize=10)
 plt.grid(True) # Ensure grid is on
 
+plt.xlim(0.1, 1.0)
+
 # Add legend only if there's something to label
 if np.any(valid_opt_indices) or np.any(valid_fixed_pre_indices) or (fixed_tau_w_optimal_xi01 is not None and np.any(valid_fixed_opt01_indices)):
     plt.legend(loc='best', fontsize=10)
@@ -266,10 +279,10 @@ if np.any(valid_opt_indices) or np.any(valid_fixed_pre_indices) or (fixed_tau_w_
 plt.tight_layout()
 
 # Save the figure
-output_dir = "xi_sensitivity_graphs_hetero" # Changed folder name
+output_dir = "d_extension" # Changed folder name
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-output_path = os.path.join(output_dir, "tau_z_comparison_hetero_poll.pdf") # Changed filename
+output_path = os.path.join(output_dir, "xi_tauz_ext.pdf") # Changed filename
 plt.savefig(output_path)
 print(f"\nPlot saved to {output_path}")
 

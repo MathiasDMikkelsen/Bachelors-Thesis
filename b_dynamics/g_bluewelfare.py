@@ -103,21 +103,23 @@ plt.plot(tau_z_smooth, agg_diff_sys1_smooth, color='tab:orange', linewidth=2, li
 plt.plot(tau_z_smooth, agg_diff_sys2_smooth, color='tab:green', linewidth=2, linestyle= 'dotted',
          label=r'Optimal $\tau_w$ (at $\xi=0.1$)')
 
+plt.xlim(0.1, 20.0)
+
 # Add horizontal line at 0 for reference.
-plt.axhline(0, linewidth=2.0 ,color='grey', linestyle='--')
+plt.axhline(0, linewidth=2.0 ,color='grey', linestyle='-')
 
 # Mark the tax level where the slopes are equal.
-if tau_z_equal_slope is not None:
-    plt.axvline(tau_z_equal_slope, color='salmon', linestyle='-', linewidth=2)
-    plt.plot(tau_z_equal_slope, spline_sys1(tau_z_equal_slope), marker='o', color='salmon',
-             markersize=6, label=rf'Equal slope at $\tau_z \approx$ {tau_z_equal_slope:.2f}')
-    plt.plot(tau_z_equal_slope, spline_sys2(tau_z_equal_slope), marker='o', color='salmon',
-             markersize=6)
+#if tau_z_equal_slope is not None:
+#    plt.axvline(tau_z_equal_slope, color='salmon', linestyle='-', linewidth=2)
+#    plt.plot(tau_z_equal_slope, spline_sys1(tau_z_equal_slope), marker='o', color='salmon',
+#             markersize=6, label=rf'Equal slope at $\tau_z \approx$ {tau_z_equal_slope:.2f}')
+#    plt.plot(tau_z_equal_slope, spline_sys2(tau_z_equal_slope), marker='o', color='salmon',
+#             markersize=6)
 
 plt.xlabel(r'$\tau_z$', fontsize=14)
 plt.ylabel(r'$\Delta \sum \log \tilde{u}_i$', fontsize=14)
 plt.legend(fontsize=10, loc='best')
-plt.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
+plt.grid(True, color='grey', linestyle='-', linewidth=0.3, alpha=0.5)
 plt.tight_layout()
 plt.savefig("c_opttax/g_bluewelfare.pdf")
 plt.show()

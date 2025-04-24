@@ -1,202 +1,143 @@
-# plot_tau_z_comparison.py (Adding third scenario with optimal fixed tau_w)
+# plot_tau_z_comparison.py (Three scenarios with custom colors, linestyles, and legend box)
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-import outer_solver as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
-import inner_solver as solver # Import inner solver directly too
-import matplotlib as mpl   # only needed once, before any figures are created
+import outer_solver               # outer_solver.maximize_welfare(G, xi)
+import inner_solver as solver     # solver.solve(...)
+import matplotlib as mpl
 mpl.rcParams.update({
     "text.usetex": True,
     "font.family":  "serif",
-    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "font.serif":   ["Palatino"],
     "text.latex.preamble": r"""
-        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \PassOptionsToPackage{sc}{mathpazo}
         \linespread{1.5}
         \usepackage[T1]{fontenc}
     """,
 })
-import sys
 import os
-from scipy.interpolate import make_interp_spline
-# Removed theta from import, defined locally below
-from inner_solver import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
-import os # For saving figure
+from inner_solver import n, alpha, beta, gamma, d0, phi, t as T
 
 # --- Simulation Parameters ---
 G_value = 5.0
-# Ensure theta is defined locally
 theta = 1.0
 
-# Define the fixed tau_w sets for scenario 2 and 3
-fixed_tau_w_preexisting = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-fixed_tau_w_optimal_xi01 = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.63241591])
+fixed_tau_w_preexisting    = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
+fixed_tau_w_optimal_xi01   = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.63241591])
+xi_values                  = np.linspace(0.1, 1.0, 20)
+# ------------------------------
 
-# Define the range and number of xi values to test
-# Using the xi_values from your previous code version
-xi_values = np.linspace(0.1, 1.0, 20)
-# --- End Simulation Parameters ---
-
-# --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---
 def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
     """
-    Optimizes social welfare by choosing only tau_z, given fixed G, xi, and tau_w.
+    Optimize only tau_z given fixed tau_w array.
     """
     def swf_obj_fixed_w(tau_z_scalar, G_val, xi_val, fw_arr):
-        tau_z = tau_z_scalar[0] if isinstance(tau_z_scalar, (list, np.ndarray)) else tau_z_scalar
-        try:
-            solution, results, converged = solver.solve(fw_arr, tau_z, G_val)
-            if not converged:
-                return 1e10
-            utilities = results['utilities']
-            agg_polluting = results['z_c'] + results['z_d']
-            valid_utilities = utilities[utilities > -1e5]
-            welfare = np.sum(valid_utilities) - 5*xi_val * (agg_polluting**theta)
-            return -welfare
-        except Exception as e:
+        tau_z = float(tau_z_scalar[0]) if hasattr(tau_z_scalar, "__len__") else float(tau_z_scalar)
+        solution, results, converged = solver.solve(fw_arr, tau_z, G_val)
+        if not converged:
             return 1e10
+        utilities    = results['utilities']
+        agg_pollute  = results['z_c'] + results['z_d']
+        valid_utils  = utilities[utilities > -1e5]
+        welfare      = np.sum(valid_utils) - 5 * xi_val * (agg_pollute ** theta)
+        return -welfare
 
-    tau_z_bounds = [(1e-6, 100.0)]
-    initial_tau_z_guess = [0.5]
     try:
-        result = minimize(swf_obj_fixed_w,
-                          initial_tau_z_guess,
-                          args=(G, xi, fixed_tau_w_arr),
-                          method='SLSQP',
-                          bounds=tau_z_bounds,
-                          options={'disp': False, 'ftol': 1e-7})
-        if result.success:
-            return result.x[0], -result.fun
-        else:
-            return None, None
-    except Exception as e:
-        return None, None
+        res = minimize(
+            swf_obj_fixed_w,
+            x0=[0.5],
+            args=(G, xi, fixed_tau_w_arr),
+            bounds=[(1e-6, 100.0)],
+            method='SLSQP',
+            options={'ftol': 1e-7, 'disp': False}
+        )
+        if res.success:
+            return res.x[0], -res.fun
+    except Exception:
+        pass
+    return None, None
 
-# Lists to store results for all 3 scenarios
-tau_z_optimal_w_results = []
-tau_z_fixed_preexisting_results = [] # Renamed list
-tau_z_fixed_optimal_xi01_results = [] # <-- Added list for scenario 3
-valid_xi_optimal_w = []
-valid_xi_fixed_preexisting = [] # Renamed list
-valid_xi_fixed_optimal_xi01 = [] # <-- Added list for scenario 3
+# Storage for results
+tau_z_optimal_w_results           = []
+tau_z_fixed_preexisting_results   = []
+tau_z_fixed_optimal_xi01_results  = []
 
-# --- Scenario 1: Optimal tau_w and tau_z ---
-print("Running Scenario 1: Variable tau_w...")
-print("-" * 30)
+# Scenario 1: Variable tau_w & tau_z
 for xi_val in xi_values:
-    # print(f"  Optimizing all for xi = {xi_val:.4f}...") # Optional print
-    try:
-        opt_tau_w, opt_tau_z, max_welfare_val = outer_solver.maximize_welfare(G_value, xi_val)
-        if opt_tau_w is not None and opt_tau_z is not None:
-            tau_z_optimal_w_results.append(opt_tau_z)
-            valid_xi_optimal_w.append(xi_val)
-        else:
-            tau_z_optimal_w_results.append(np.nan)
-            valid_xi_optimal_w.append(xi_val)
-    except Exception as e:
-        print(f"    Error during Scenario 1 optimization for xi = {xi_val:.4f}: {e}")
-        tau_z_optimal_w_results.append(np.nan)
-        valid_xi_optimal_w.append(xi_val)
-print("Scenario 1 finished.")
+    opt_tau_w, opt_tau_z, _ = outer_solver.maximize_welfare(G_value, xi_val)
+    tau_z_optimal_w_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
 
-# --- Scenario 2: Fixed tau_w (Pre-existing), Optimal tau_z ---
-print("\nRunning Scenario 2: Fixed tau_w (Pre-existing)...")
-print(f"(Using fixed tau_w = {fixed_tau_w_preexisting})")
-print("-" * 30)
+# Scenario 2: Fixed pre-existing tau_w, optimize tau_z
 for xi_val in xi_values:
-    # print(f"  Optimizing tau_z for xi = {xi_val:.4f}...") # Optional print
-    try:
-        # Call with pre-existing fixed tau_w
-        opt_tau_z, max_welfare_val = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_preexisting)
-        if opt_tau_z is not None:
-            tau_z_fixed_preexisting_results.append(opt_tau_z)
-            valid_xi_fixed_preexisting.append(xi_val)
-        else:
-            tau_z_fixed_preexisting_results.append(np.nan)
-            valid_xi_fixed_preexisting.append(xi_val)
-    except Exception as e:
-        print(f"    Error during Scenario 2 optimization for xi = {xi_val:.4f}: {e}")
-        tau_z_fixed_preexisting_results.append(np.nan)
-        valid_xi_fixed_preexisting.append(xi_val)
-print("Scenario 2 finished.")
+    opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_preexisting)
+    tau_z_fixed_preexisting_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
 
-# --- Scenario 3: Fixed tau_w (Optimal at xi=0.1), Optimal tau_z ---
-print("\nRunning Scenario 3: Fixed tau_w (Optimal at xi=0.1)...")
-print(f"(Using fixed tau_w = {fixed_tau_w_optimal_xi01})")
-print("-" * 30)
+# Scenario 3: Fixed optimal@xi=0.1 tau_w, optimize tau_z
 for xi_val in xi_values:
-    # print(f"  Optimizing tau_z for xi = {xi_val:.4f}...") # Optional print
-    try:
-        # Call with optimal fixed tau_w
-        opt_tau_z, max_welfare_val = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01)
-        if opt_tau_z is not None:
-            tau_z_fixed_optimal_xi01_results.append(opt_tau_z)
-            valid_xi_fixed_optimal_xi01.append(xi_val)
-        else:
-            tau_z_fixed_optimal_xi01_results.append(np.nan)
-            valid_xi_fixed_optimal_xi01.append(xi_val)
-    except Exception as e:
-        print(f"    Error during Scenario 3 optimization for xi = {xi_val:.4f}: {e}")
-        tau_z_fixed_optimal_xi01_results.append(np.nan)
-        valid_xi_fixed_optimal_xi01.append(xi_val)
-print("Scenario 3 finished.")
+    opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01)
+    tau_z_fixed_optimal_xi01_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
 
-print("-" * 30)
-print("Simulations complete.")
+# Convert to numpy arrays
+tau_z_optimal_w_results          = np.array(tau_z_optimal_w_results)
+tau_z_fixed_preexisting_results  = np.array(tau_z_fixed_preexisting_results)
+tau_z_fixed_optimal_xi01_results = np.array(tau_z_fixed_optimal_xi01_results)
 
-
-# --- Plotting (3 lines, updated labels) ---
-
-# Convert lists to numpy arrays
-tau_z_optimal_w_results = np.array(tau_z_optimal_w_results)
-valid_xi_optimal_w = np.array(valid_xi_optimal_w)
-tau_z_fixed_preexisting_results = np.array(tau_z_fixed_preexisting_results) # Renamed
-valid_xi_fixed_preexisting = np.array(valid_xi_fixed_preexisting) # Renamed
-tau_z_fixed_optimal_xi01_results = np.array(tau_z_fixed_optimal_xi01_results) # Added
-valid_xi_fixed_optimal_xi01 = np.array(valid_xi_fixed_optimal_xi01) # Added
-
-# Create the plot
+# --- Plotting ---
 plt.figure(figsize=(7, 5))
 
-# Plot Lines - Filter NaNs and update labels
-valid_opt_indices = ~np.isnan(tau_z_optimal_w_results)
-valid_fixed_pre_indices = ~np.isnan(tau_z_fixed_preexisting_results)
-valid_fixed_opt01_indices = ~np.isnan(tau_z_fixed_optimal_xi01_results)
+# Masks for valid data
+mask1 = ~np.isnan(tau_z_optimal_w_results)
+mask2 = ~np.isnan(tau_z_fixed_preexisting_results)
+mask3 = ~np.isnan(tau_z_fixed_optimal_xi01_results)
 
-if np.any(valid_opt_indices):
-    plt.plot(valid_xi_optimal_w[valid_opt_indices],
-             tau_z_optimal_w_results[valid_opt_indices],
-             linestyle='-', linewidth=2, label='Variable $\\tau_w$') # Updated label
+# Variable tau_w (steelblue solid)
+if mask1.any():
+    plt.plot(
+        xi_values[mask1],
+        tau_z_optimal_w_results[mask1],
+        '-', linewidth=2,
+        color='steelblue',
+        label='Variable $\\tau_w$'
+    )
 
-if np.any(valid_fixed_pre_indices):
-    plt.plot(valid_xi_fixed_preexisting[valid_fixed_pre_indices],
-             tau_z_fixed_preexisting_results[valid_fixed_pre_indices],
-             linestyle='--', linewidth=2, label='Fixed $\\tau_w$ (Pre-existing)') # Updated label
 
-if np.any(valid_fixed_opt01_indices):
-    plt.plot(valid_xi_fixed_optimal_xi01[valid_fixed_opt01_indices],
-             tau_z_fixed_optimal_xi01_results[valid_fixed_opt01_indices],
-             linestyle=':', linewidth=2, label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)') # Added line and label
+# Fixed pre-existing tau_w (orange dashed)
+if mask2.any():
+    plt.plot(
+        xi_values[mask2],
+        tau_z_fixed_preexisting_results[mask2],
+        '--', linewidth=2,
+        color='tab:orange',
+        label='Fixed $\\tau_w$ (Pre-existing)'
+    )
 
-# Add labels
+# Fixed optimal@xi=0.1 tau_w (mediumseagreen dot-dash)
+if mask3.any():
+    plt.plot(
+        xi_values[mask3],
+        tau_z_fixed_optimal_xi01_results[mask3],
+        ':', linewidth=2,
+        color='tab:green',
+        label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)'
+    )
+
+plt.xlim(0.1, 1.0)
+
 plt.xlabel(r'$\xi$', fontsize=14)
-plt.ylabel(r'$\tau_z$', fontsize=14)
-
-# Add legend
-# Check if at least one line has valid data
-if np.any(valid_opt_indices) or np.any(valid_fixed_pre_indices) or np.any(valid_fixed_opt01_indices):
-    plt.legend(loc='best') # Changed loc back to 'best' for potentially 3 lines
-
-# Apply tight layout
-plt.tight_layout()
+plt.ylabel(r'Optimal environmental tax ($\tau_z$)', fontsize=14)
 plt.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 
-# Save the figure
-output_dir = "c_opttax" # Save in sub-folder relative to script execution
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-output_path = os.path.join(output_dir, "e_xi_tauz.pdf") # New filename
-plt.savefig(output_path)
-print(f"\nPlot saved to {output_path}")
+# Legend with box
+plt.legend(loc='best', fontsize='medium', frameon=True)
+
+plt.tight_layout()
+
+# Save and show
+output_dir = "c_opttax"
+os.makedirs(output_dir, exist_ok=True)
+outpath = os.path.join(output_dir, "e_xi_tauz.pdf")
+plt.savefig(outpath, bbox_inches='tight')
+print(f"\nPlot saved to {outpath}")
 
 plt.show()

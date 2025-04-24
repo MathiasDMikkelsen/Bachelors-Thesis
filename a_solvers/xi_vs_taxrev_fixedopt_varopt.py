@@ -86,24 +86,25 @@ for xi in xi_values:
         rev_fix_tot.append(np.nan)
 
 # Plotting
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=(9, 9))
 
 # Variable tau_w lines
-ax.plot(valid_xi, rev_var_tot, '-',   linewidth=2, color='tab:blue',   label='Total (var. $\\tau_w$)')
-ax.plot(valid_xi, rev_var_env, '--',  linewidth=2, color='tab:blue',   label='Env. (var. $\\tau_w$)')
-ax.plot(valid_xi, rev_var_inc, '-.',   linewidth=2, color='tab:blue',   label='Inc. (var. $\\tau_w$)')
+ax.plot(valid_xi, rev_var_tot, '-.',   linewidth=2, color='steelblue',   label='Total (var. $\\tau_w$)')
+ax.plot(valid_xi, rev_var_env, '--',  linewidth=2, color='steelblue',   label='Env. (var. $\\tau_w$)')
+ax.plot(valid_xi, rev_var_inc, '-',   linewidth=2, color='steelblue',   label='Inc. (var. $\\tau_w$)')
 
 # Fixed tau_w lines
-ax.plot(valid_xi, rev_fix_tot, '-',   linewidth=2, color='tab:orange', label='Total (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
-ax.plot(valid_xi, rev_fix_env, '--',  linewidth=2, color='tab:orange', label='Env. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
-ax.plot(valid_xi, rev_fix_inc, '-.',   linewidth=2, color='tab:orange', label='Inc. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
+ax.plot(valid_xi, rev_fix_tot, '-.',   linewidth=2, color='tab:green', label='Total (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
+ax.plot(valid_xi, rev_fix_env, '--',  linewidth=2, color='tab:green', label='Env. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
+ax.plot(valid_xi, rev_fix_inc, '-',   linewidth=2, color='tab:green', label='Inc. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
 
 # Government spending line
-ax.axhline(G_value, color='gray', linestyle='--', linewidth=2, label=r'Gov. spending')
+ax.axhline(G_value, color='gray', linestyle='-', linewidth=2, label=r'Gov. spending')
 
 ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 ax.set_xlabel(r'$\xi$', fontsize=14)
 ax.set_ylabel('Revenue', fontsize=14)
+ax.set_xlim(xi_values[0], xi_values[-1])
 
 # Legend in two rows below the plot
 ax.legend(
@@ -120,7 +121,7 @@ plt.subplots_adjust(bottom=0.30, right=0.98)
 # Save figure
 output_dir = "c_opttax"
 os.makedirs(output_dir, exist_ok=True)
-output_filename = "f_revenue_legend_two_rows.pdf"
+output_filename = "f_revenue.pdf"
 output_path = os.path.join(output_dir, output_filename)
 plt.savefig(output_path, bbox_inches='tight')
 print(f"\nPlot saved to {output_path}")

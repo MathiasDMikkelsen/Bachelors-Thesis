@@ -5,10 +5,21 @@ import matplotlib.pyplot as plt
 import outer_solver
 from inner_solver import n
 import os
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
 
 # --- Simulation Parameters ---
 G_value = 5.0
-xi_values = np.linspace(0.04, 1.0, 25)
+xi_values = np.linspace(0.1, 1.0, 40)
 
 # --- Baseline Calculation ---
 print(f"Calculating baseline taxes at xi = {xi_values[0]:.4f}")
@@ -35,7 +46,7 @@ optimal_tau_w_results = np.array(optimal_tau_w_results)
 valid_xi_values = np.array(valid_xi_values)
 
 # --- Percentage-point difference from baseline ---
-pct_diff_from_baseline = optimal_tau_w_results - baseline_tau_w
+pct_diff_from_baseline = (optimal_tau_w_results - baseline_tau_w)*100
 
 # --- Colormap Setup ---
 blue_cmap = plt.cm.Blues
@@ -48,8 +59,10 @@ for i in range(n):
     ax.plot(valid_xi_values, pct_diff_from_baseline[:, i],
             linestyle='-', linewidth=2, color=colors[i], label=rf'$\Delta \tau_w^{{{i+1}}} \cdot 100$')
 
+ax.set_xlim(xi_values[0], xi_values[-1])
+
 ax.set_xlabel(r'$\xi$', fontsize=12)
-ax.set_ylabel('Pct. points', fontsize=12)
+ax.set_ylabel('Change (pct. points)', fontsize=12)
 ax.legend(loc='best', fancybox=True, framealpha=0.8)
 ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 
