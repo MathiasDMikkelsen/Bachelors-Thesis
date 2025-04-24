@@ -5,6 +5,20 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 import outer_solver as outer_solver # Imports the outer solver with maximize_welfare(G, xi)
 import inner_solver as solver # Import inner solver directly too
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
+import sys
+import os
+from scipy.interpolate import make_interp_spline
 # Removed theta from import, defined locally below
 from inner_solver import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
 import os # For saving figure
@@ -20,7 +34,7 @@ fixed_tau_w_optimal_xi01 = np.array([-1.12963781, -0.06584074, 0.2043803, 0.3833
 
 # Define the range and number of xi values to test
 # Using the xi_values from your previous code version
-xi_values = np.linspace(0.1, 1.0, 10)
+xi_values = np.linspace(0.1, 1.0, 20)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---

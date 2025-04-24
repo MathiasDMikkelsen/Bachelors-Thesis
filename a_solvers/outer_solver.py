@@ -161,19 +161,3 @@ if optimal_tau_w is not None:
 
     agg_polluting = results['z_c'] + results['z_d']
 effective_utilities = results['utilities']
-
-# Define a function to compute the Gini coefficient
-def gini(array):
-    # Convert to numpy array and flatten
-    array = np.array(array).flatten()
-    # Sort the array
-    sorted_array = np.sort(array)
-    n = array.size
-    # Create index numbers (1-indexed)
-    index = np.arange(1, n+1)
-    # Compute Gini coefficient using the standard formula
-    return (np.sum((2 * index - n - 1) * sorted_array)) / (n * np.sum(sorted_array))
-
-# Calculate the Gini coefficient for effective utilities
-gini_value = gini(effective_utilities)
-print("Gini coefficient in effective utility:", gini_value)

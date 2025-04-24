@@ -1,5 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
 import sys
 import os
 from scipy.interpolate import make_interp_spline
@@ -99,7 +110,7 @@ plt.axhline(0, linewidth=2.0 ,color='grey', linestyle='--')
 if tau_z_equal_slope is not None:
     plt.axvline(tau_z_equal_slope, color='salmon', linestyle='-', linewidth=2)
     plt.plot(tau_z_equal_slope, spline_sys1(tau_z_equal_slope), marker='o', color='salmon',
-             markersize=6, label=rf'Equal slope at $\tau_z$ ≈ {tau_z_equal_slope:.2f}')
+             markersize=6, label=rf'Equal slope at $\tau_z \approx$ {tau_z_equal_slope:.2f}')
     plt.plot(tau_z_equal_slope, spline_sys2(tau_z_equal_slope), marker='o', color='salmon',
              markersize=6)
 

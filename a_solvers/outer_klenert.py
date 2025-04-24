@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.optimize import minimize, NonlinearConstraint
-import a_solvers.inner_labor as solver
-from a_solvers.inner_labor import alpha, beta, gamma, d0, phi, n
+import inner_solver as solver
+from inner_solver import alpha, beta, gamma, d0, phi, n
 
 # a. parameters
 T = 24
-xi = 0.1 # Removed this line
+xi = 1.0 # Removed this line
 theta = 1.0
 G = 5.0
 

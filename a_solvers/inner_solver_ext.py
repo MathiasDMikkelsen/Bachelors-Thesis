@@ -12,14 +12,14 @@ epsilon_d = 0.92   # Labor share parameter for dirty firm
 sigma = 0.5        # Elasticity sigma (labor vs composite)
 p_c = 1.0          # Numeraire
 phi = np.array([0.03, 0.0825, 0.141, 0.229, 0.511])
-varphi = np.array([0.03, 0.0825, 0.141, 0.229, 0.5175])
+varphi = np.array([0.03, 0.04, 0.08, 0.15, 0.70])
 n = len(phi)
 
 # b. Abatement extension parameters
 # SET YOUR CALIBRATED ABATEMENT PRICE HERE
-p_a = 15.0        # Abatement price
+p_a = 7.5        # Abatement price
 varsigma = 2.0    # Elasticity between pollution and abatement
-epsilon_z = 0.7  # Share parameter in Z/A nest
+epsilon_z = 0.80  # Share parameter in Z/A nest
 
 # c. Rho definitions
 a = (sigma - 1) / sigma         # rho for top-level CES
@@ -193,7 +193,7 @@ def solve(tau_w, tau_z, g):
 if __name__ == "__main__":
     print("--- Running direct test of inner_solver.py (Baseline + Abatement) ---")
     test_tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-    test_tau_z = 3.0
+    test_tau_z = 1.0
     test_g = 5.0
     print(f"Using fixed parameters: p_a={p_a}, varsigma={varsigma}, epsilon_z={epsilon_z}")
     print(f"Testing with tau_w = {test_tau_w}, tau_z = {test_tau_z}, G = {test_g}")

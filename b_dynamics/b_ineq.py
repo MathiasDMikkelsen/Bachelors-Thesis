@@ -4,12 +4,22 @@ import os
 import sys
 from matplotlib.lines import Line2D
 import matplotlib.gridspec as gridspec
-
-# Set project root so that inner_solver can be imported.
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 from a_solvers.inner_solver import solve
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
+
 
 # =============================================================================
 # 1. Calibration and Policy Parameters
@@ -25,7 +35,7 @@ n     = len(phi)
 
 # Define income tax (wage tax) vectors:
 tau_w     = np.array([0.015, 0.072, 0.115, 0.156, 0.24])                # Original combo
-tau_w_alt = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.63241591])  # Alternative combo
+tau_w_alt = np.array([-1.12963771, -0.06584069,  0.20438033,  0.38336989,  0.63241592])  # Alternative combo
 g = 5.0
 
 # Dual expenditure function: minimum expenditure required to achieve U_target.

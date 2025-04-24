@@ -2,19 +2,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import os
+import matplotlib.pyplot as plt
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-from a_solvers.inner_labor import solve
+from a_solvers.inner_solver import solve
 
 # a. Set policies
 tau_w_orig = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-tau_w_new = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.63241591])
+tau_w_new = np.array([-1.12963771, -0.06584069,  0.20438033,  0.38336989,  0.63241592])
 g = 5.0
 
 # b. Range for tau_z
-tau_z_values = np.linspace(0.1, 20.0, 50)
+tau_z_values = np.linspace(1.0, 20.0, 50)
 
 # Prepare storage lists for the two scenarios:
 t_c_orig       = []
@@ -78,13 +90,13 @@ axs[0,0].plot(tau_z_values, t_c_orig, color=light_blue, linestyle='-', linewidth
 axs[0,0].plot(tau_z_values, t_c_new, color=light_blue, linestyle='--', linewidth=2)
 axs[0,0].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[0,0].set_ylabel(r'$t_c$', fontsize=12, rotation=90)
-axs[0,0].set_title('Labor, clean sector', fontsize=12)
+axs[0,0].set_title('Effective labor, clean sector', fontsize=12)
 
 axs[0,1].plot(tau_z_values, t_d_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[0,1].plot(tau_z_values, t_d_new, color=light_blue, linestyle='--', linewidth=2)
 axs[0,1].set_xlabel(r'$\tau_z$', fontsize=12)
 axs[0,1].set_ylabel(r'$t_d$', fontsize=12, rotation=90)
-axs[0,1].set_title('Labor, dirty sector', fontsize=12)
+axs[0,1].set_title('Effective labor, dirty sector', fontsize=12)
 
 axs[0,2].plot(tau_z_values, z_c_orig, color=light_blue, linestyle='-', linewidth=2)
 axs[0,2].plot(tau_z_values, z_c_new, color=light_blue, linestyle='--', linewidth=2)
@@ -132,6 +144,7 @@ axs[2,2].set_title('Dirty good supply', fontsize=12)
 
 for ax in axs.flat:
     ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
+    ax.set_xlim(tau_z_values[0], tau_z_values[-1])
 
 # Global legend below all plots
 from matplotlib.lines import Line2D
