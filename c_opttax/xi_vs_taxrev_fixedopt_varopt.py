@@ -99,10 +99,10 @@ ax.plot(valid_xi, rev_fix_env, '--',  linewidth=2, color='tab:green', label='Env
 ax.plot(valid_xi, rev_fix_inc, '-',   linewidth=2, color='tab:green', label='Inc. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
 
 # Government spending line
-ax.axhline(G_value, color='gray', linestyle='-', linewidth=2, label=r'Gov. spending')
+ax.axhline(G_value, color='gray', linestyle='-', linewidth=2, label=r'Gov\'t spending')
 
 ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
-ax.set_xlabel(r'$\xi$', fontsize=14)
+ax.set_xlabel(r'Environmental preference ($\xi$)', fontsize=14)
 ax.set_ylabel('Revenue', fontsize=14)
 ax.set_xlim(xi_values[0], xi_values[-1])
 

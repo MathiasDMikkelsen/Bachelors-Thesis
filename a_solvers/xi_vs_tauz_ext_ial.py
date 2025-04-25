@@ -8,6 +8,17 @@ import inner_solver_ext as solver # Import inner solver directly too
 # Removed theta from import, defined locally below
 from inner_solver_ext import n, alpha, beta, gamma, d0, phi, t as T # Import necessary params
 import os # For saving figure
+import matplotlib as mpl   # only needed once, before any figures are created
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family":  "serif",
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "text.latex.preamble": r"""
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \linespread{1.5}
+        \usepackage[T1]{fontenc}
+    """,
+})
 
 # --- Simulation Parameters ---
 G_value = 5.0
@@ -20,7 +31,7 @@ fixed_tau_w_optimal_xi01 = np.array([-1.08858208, -0.04377549,  0.22144972,  0.3
 
 # Define the range and number of xi values to test
 # Using the xi_values from your previous code version
-xi_values = np.linspace(0.1, 0.75, 20)
+xi_values = np.linspace(0.1, 1.0, 20)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY tau_z for FIXED tau_w (Unchanged) ---
@@ -165,9 +176,11 @@ if np.any(valid_fixed_opt01_indices):
              tau_z_fixed_optimal_xi01_results[valid_fixed_opt01_indices],
              linestyle=':', label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)') # Added line and label
 
+plt.xlim(0.1, 1.0)
+
 # Add labels
-plt.xlabel(r'$\xi$', fontsize=14)
-plt.ylabel(r'$\tau_z$', fontsize=14)
+plt.xlabel(r'Environmental preference ($\xi$)', fontsize=14)
+plt.ylabel(r'Optimal environmental tax ($\tau_z$)', fontsize=14)
 
 # Add legend
 # Check if at least one line has valid data

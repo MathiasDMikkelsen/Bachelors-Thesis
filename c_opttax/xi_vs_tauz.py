@@ -2,22 +2,26 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize
-import outer_solver               # outer_solver.maximize_welfare(G, xi)
-import inner_solver as solver     # solver.solve(...)
-import matplotlib as mpl
+import sys
+import os
+import matplotlib.pyplot as plt
+import matplotlib as mpl   # only needed once, before any figures are created
 mpl.rcParams.update({
     "text.usetex": True,
     "font.family":  "serif",
-    "font.serif":   ["Palatino"],
+    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
     "text.latex.preamble": r"""
-        \PassOptionsToPackage{sc}{mathpazo}
+        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
         \linespread{1.5}
         \usepackage[T1]{fontenc}
     """,
 })
-import os
-from inner_solver import n, alpha, beta, gamma, d0, phi, t as T
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from a_solvers.inner_solver import solve
+from a_solvers import outer_solver
+
 
 # --- Simulation Parameters ---
 G_value = 5.0
