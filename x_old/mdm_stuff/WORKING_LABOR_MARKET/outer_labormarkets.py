@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize, NonlinearConstraint
-import a_solvers.inner_labor as solver
-from a_solvers.inner_labor import alpha, beta, gamma, d0, phi, n
+import x_old.inner_labor as solver
+from x_old.inner_labor import alpha, beta, gamma, d0, phi, n
 
 # a. parameters
 T = 24

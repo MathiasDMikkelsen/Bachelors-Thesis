@@ -2,26 +2,32 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-import os
-import matplotlib.pyplot as plt
-import matplotlib as mpl   # only needed once, before any figures are created
+from scipy.optimize import minimize
+import sys, os
+
+import matplotlib as mpl
 mpl.rcParams.update({
     "text.usetex": True,
     "font.family":  "serif",
-    "font.serif":  ["Palatino"],      # this line makes Matplotlib insert \usepackage{mathpazo}
+    "font.serif":   ["Palatino"],
     "text.latex.preamble": r"""
-        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \PassOptionsToPackage{sc}{mathpazo}
         \linespread{1.5}
         \usepackage[T1]{fontenc}
     """,
 })
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-from a_solvers.inner_solver import solve
-from a_solvers import outer_solver
 
+a_solvers_dir = os.path.join(project_root, "a_solvers")
+
+# ensure both are on sys.path
+for p in (project_root, a_solvers_dir):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+    
+from a_solvers import outer_solver               
+from a_solvers import inner_solver as solver    
+from a_solvers.inner_solver import n, alpha, beta, gamma, d0, phi, t as T
 
 # --- Simulation Parameters ---
 G_value = 5.0
@@ -128,7 +134,7 @@ if mask3.any():
 
 plt.xlim(0.1, 1.0)
 
-plt.xlabel(r'$\xi$', fontsize=14)
+plt.xlabel(r'Environmental preference ($\xi$)', fontsize=14)
 plt.ylabel(r'Optimal environmental tax ($\tau_z$)', fontsize=14)
 plt.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 
@@ -138,10 +144,4 @@ plt.legend(loc='best', fontsize='medium', frameon=True)
 plt.tight_layout()
 
 # Save and show
-output_dir = "c_opttax"
-os.makedirs(output_dir, exist_ok=True)
-outpath = os.path.join(output_dir, "e_xi_tauz.pdf")
-plt.savefig(outpath, bbox_inches='tight')
-print(f"\nPlot saved to {outpath}")
-
-plt.show()
+plt.savefig("c_opttax/a_opttax.pdf", bbox_inches='tight')

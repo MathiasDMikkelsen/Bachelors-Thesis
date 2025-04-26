@@ -3,10 +3,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import sys, os
 from scipy.optimize import minimize
-import outer_solver
-import inner_solver as solver
-from inner_solver import n, alpha, beta, gamma, d0, phi, t as T
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+a_solvers_dir = os.path.join(project_root, "a_solvers")
+# ensure both are on sys.path
+for p in (project_root, a_solvers_dir):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+        
+from a_solvers import outer_solver 
+import a_solvers.inner_solver as solver
+from a_solvers.inner_solver import n, alpha, beta, gamma, d0, phi, t as T
 import matplotlib as mpl   # only needed once, before any figures are created
 mpl.rcParams.update({
     "text.usetex": True,
@@ -86,7 +94,7 @@ for xi in xi_values:
         rev_fix_tot.append(np.nan)
 
 # Plotting
-fig, ax = plt.subplots(figsize=(9, 9))
+fig, ax = plt.subplots(figsize=(8, 8))
 
 # Variable tau_w lines
 ax.plot(valid_xi, rev_var_tot, '-.',   linewidth=2, color='steelblue',   label='Total (var. $\\tau_w$)')
@@ -99,7 +107,7 @@ ax.plot(valid_xi, rev_fix_env, '--',  linewidth=2, color='tab:green', label='Env
 ax.plot(valid_xi, rev_fix_inc, '-',   linewidth=2, color='tab:green', label='Inc. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
 
 # Government spending line
-ax.axhline(G_value, color='gray', linestyle='-', linewidth=2, label=r'Gov\'t spending')
+ax.axhline(G_value, color='gray', linestyle='-', linewidth=2, label=r'Gov. spending')
 
 ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 ax.set_xlabel(r'Environmental preference ($\xi$)', fontsize=14)
@@ -109,21 +117,14 @@ ax.set_xlim(xi_values[0], xi_values[-1])
 # Legend in two rows below the plot
 ax.legend(
     loc='upper center',
-    bbox_to_anchor=(0.5, -0.1),
+    bbox_to_anchor=(0.5, -0.125),
     ncol=4,                # 4 entries on the first row, 3 on the second
-    fontsize='medium',
-    frameon=False
+    frameon=False,
+    fontsize=9
 )
 
 # Adjust bottom margin to make room for the two‐row legend
 plt.subplots_adjust(bottom=0.30, right=0.98)
 
 # Save figure
-output_dir = "c_opttax"
-os.makedirs(output_dir, exist_ok=True)
-output_filename = "f_revenue.pdf"
-output_path = os.path.join(output_dir, output_filename)
-plt.savefig(output_path, bbox_inches='tight')
-print(f"\nPlot saved to {output_path}")
-
-plt.show()
+plt.savefig("c_opttax/b_revenue.pdf", bbox_inches='tight')

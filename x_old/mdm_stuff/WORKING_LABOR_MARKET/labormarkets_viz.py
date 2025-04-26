@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from a_solvers.inner_labor import solve  # assuming the new model is saved in this file
+from x_old.inner_labor import solve  # assuming the new model is saved in this file
 
 # a. set policy
 tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
