@@ -97,14 +97,14 @@ for xi in xi_values:
 fig, ax = plt.subplots(figsize=(8, 8))
 
 # Variable tau_w lines
-ax.plot(valid_xi, rev_var_tot, '-.',   linewidth=2, color='steelblue',   label='Total (var. $\\tau_w$)')
-ax.plot(valid_xi, rev_var_env, '--',  linewidth=2, color='steelblue',   label='Env. (var. $\\tau_w$)')
-ax.plot(valid_xi, rev_var_inc, '-',   linewidth=2, color='steelblue',   label='Inc. (var. $\\tau_w$)')
+ax.plot(valid_xi, rev_var_tot, '-.',   linewidth=2, color='steelblue',   label='Total (var. inc. tax)')
+ax.plot(valid_xi, rev_var_env, '-',  linewidth=2, color='steelblue',   label='Env. (var. inc. tax)')
+ax.plot(valid_xi, rev_var_inc, '--',   linewidth=2, color='steelblue',   label='Inc. (var. inc. tax)')
 
 # Fixed tau_w lines
-ax.plot(valid_xi, rev_fix_tot, '-.',   linewidth=2, color='tab:green', label='Total (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
-ax.plot(valid_xi, rev_fix_env, '--',  linewidth=2, color='tab:green', label='Env. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
-ax.plot(valid_xi, rev_fix_inc, '-',   linewidth=2, color='tab:green', label='Inc. (fixed $\\tau_w$ opt. at $\\xi=0.1$)')
+ax.plot(valid_xi, rev_fix_tot, '-.',   linewidth=2, color='tab:green', label='Total (baseline opt. fixed inc tax.)')
+ax.plot(valid_xi, rev_fix_env, '-',  linewidth=2, color='tab:green', label='Env. (baseline opt. fixed inc tax.)')
+ax.plot(valid_xi, rev_fix_inc, '--',   linewidth=2, color='tab:green', label='Inc. (baseline opt. fixed inc tax.)')
 
 # Government spending line
 ax.axhline(G_value, color='gray', linestyle='-', linewidth=2, label=r'Gov. spending')
