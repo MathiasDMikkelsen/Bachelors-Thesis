@@ -100,7 +100,7 @@ def maximize_welfare(G, xi):
 # c. run optimization
 if __name__ == "__main__":
     G = 5.0
-    xi_example_value = 0.01
+    xi_example_value = 0.1
     optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value)
 
     if optimal_tau_w is not None:

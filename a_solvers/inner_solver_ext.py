@@ -17,9 +17,9 @@ n = len(phi)
 
 # b. Abatement extension parameters
 # SET YOUR CALIBRATED ABATEMENT PRICE HERE
-p_a = 7.5        # Abatement price
-varsigma = 2.0    # Elasticity between pollution and abatement
-epsilon_z = 0.80  # Share parameter in Z/A nest
+p_a =  1.0        
+varsigma = 2.0    
+epsilon_z = 0.85
 
 # c. Rho definitions
 a = (sigma - 1) / sigma         # rho for top-level CES

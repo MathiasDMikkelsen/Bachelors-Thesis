@@ -109,14 +109,13 @@ for xi_val, col in zip(xis, maroon_shades):
         tau_z_smooth,
         -5 * xi_val * poll_slope,
         color=col, linestyle='-', linewidth=2,
-        label=f'Green benefit ($\\xi={xi_val}$)'
+        label=f'Green benefit, pre-existing inc. tax ($\\xi={xi_val}$)'
     )
     # optimal τ_w (no extra legend entry)
     plt.plot(
         tau_z_smooth,
         -5 * xi_val * poll_slope_opt,
-        color=col, linestyle='--', linewidth=2,
-        label='_nolegend_'
+        color=col, linestyle='--', label=f'Green benefit, baseline opt. inc tax ($\\xi={xi_val}$)', linewidth=2
     )
 
 # ─── Styling (unchanged) ─────────────────────────────────────────────────────
@@ -125,7 +124,7 @@ plt.ylim(-0.25, 1.00)
 plt.xlabel(r'Environmental tax ($\tau_z$)', fontsize=14)
 plt.ylabel(r'Marginal welfare change', fontsize=14)
 plt.grid(True, color='grey', linestyle='-', linewidth=0.3, alpha=0.5)
-plt.legend(loc='best', fontsize=10)
+plt.legend(loc='best', fontsize=8)
 plt.tight_layout()
 
 # ─── Save & show ─────────────────────────────────────────────────────────────

@@ -63,7 +63,7 @@ blue_cmap = plt.cm.Blues
 colors = [blue_cmap(0.3 + 0.5 * i / (n - 1)) for i in range(n)]
 
 # --- Plotting ---
-fig, ax = plt.subplots(figsize=(7, 5))
+fig, ax = plt.subplots(figsize=(5, 4))
 
 for i in range(n):
     ax.plot(valid_xi_values, pct_diff_from_baseline[:, i],
@@ -72,7 +72,7 @@ for i in range(n):
 ax.set_xlim(xi_values[0], xi_values[-1])
 
 ax.set_xlabel(r'Environmental preference ($\xi$)', fontsize=12)
-ax.set_ylabel(r'Change in income tax rate (%-points)', fontsize=12)
+ax.set_ylabel(r'Change in income tax rate (\%-points)', fontsize=12)
 ax.legend(loc='best', fancybox=True, framealpha=0.8)
 ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
 
