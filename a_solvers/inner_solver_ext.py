@@ -17,9 +17,9 @@ n = len(phi)
 
 # b. Abatement extension parameters
 # SET YOUR CALIBRATED ABATEMENT PRICE HERE
-p_a =  1.0        
+p_a =  5.0        
 varsigma = 2.0    
-epsilon_z = 0.85
+epsilon_z = 0.82
 
 # c. Rho definitions
 a = (sigma - 1) / sigma         # rho for top-level CES
@@ -29,7 +29,7 @@ if sigma == 1.0: a = -np.inf
 if varsigma == 1.0: b = -np.inf
 
 
-def solve(tau_w, tau_z, g):
+def solve(tau_w, tau_z, g, p_a):
     """
     Solve general equilibrium with abatement.
     tau_w: array of income tax rates (length n)
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     print(f"Using fixed parameters: p_a={p_a}, varsigma={varsigma}, epsilon_z={epsilon_z}")
     print(f"Testing with tau_w = {test_tau_w}, tau_z = {test_tau_z}, G = {test_g}")
 
-    solution_vec, results_dict, converged_flag = solve(test_tau_w, test_tau_z, test_g)
+    solution_vec, results_dict, converged_flag = solve(test_tau_w, test_tau_z, test_g, p_a)
 
     if converged_flag:
         print("\nInner solver converged successfully.")

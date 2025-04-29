@@ -35,7 +35,7 @@ theta = 1.0
 
 fixed_tau_w_preexisting    = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 fixed_tau_w_optimal_xi01   = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.63241591])
-xi_values                  = np.linspace(0.1, 1.0, 20)
+xi_values                  = np.linspace(0.1, 1.0, 5)
 # ------------------------------
 
 def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
@@ -108,7 +108,7 @@ if mask1.any():
         tau_z_optimal_w_results[mask1],
         '-', linewidth=2,
         color='steelblue',
-        label='Variable $\\tau_w$'
+        label='Variable inc. tax'
     )
 
 
@@ -119,7 +119,7 @@ if mask2.any():
         tau_z_fixed_preexisting_results[mask2],
         '--', linewidth=2,
         color='tab:orange',
-        label='Fixed $\\tau_w$ (Pre-existing)'
+        label='Fixed inc. tax (pre-existing)'
     )
 
 # Fixed optimal@xi=0.1 tau_w (mediumseagreen dot-dash)
@@ -129,7 +129,7 @@ if mask3.any():
         tau_z_fixed_optimal_xi01_results[mask3],
         ':', linewidth=2,
         color='tab:green',
-        label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)'
+        label='Fixed inc. tax (optimal at $\\xi=0.1$)'
     )
 
 plt.xlim(0.1, 1.0)

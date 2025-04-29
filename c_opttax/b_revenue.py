@@ -94,7 +94,7 @@ for xi in xi_values:
         rev_fix_tot.append(np.nan)
 
 # Plotting
-fig, ax = plt.subplots(figsize=(8, 8))
+fig, ax = plt.subplots(figsize=(7, 7))
 
 # Variable tau_w lines
 ax.plot(valid_xi, rev_var_tot, '-.',   linewidth=2, color='steelblue',   label='Total (var. inc. tax)')
@@ -120,7 +120,7 @@ ax.legend(
     bbox_to_anchor=(0.5, -0.125),
     ncol=4,                # 4 entries on the first row, 3 on the second
     frameon=False,
-    fontsize=9
+    fontsize=10
 )
 
 # Adjust bottom margin to make room for the two‐row legend

@@ -33,6 +33,7 @@ mpl.rcParams.update({
 G_value = 5.0
 # Ensure theta is defined locally
 theta = 1.0
+p_a = 5.0
 
 # Define the fixed τ_w set for scenario 2
 fixed_tau_w_preexisting = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
@@ -41,18 +42,19 @@ fixed_tau_w_preexisting = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 fixed_tau_w_optimal_xi01 = np.array([-1.22559844, -0.11142818,  0.17570669,  0.36519415,  0.62727242])
 
 # Define the range and number of ξ values to test
-xi_values = np.linspace(0.1, 0.25, 10)
+xi_values = np.linspace(0.1, 1.0, 10)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY τ_z for FIXED τ_w (Unchanged) ---
-def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
+def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr, p_a):
     """
     Optimizes social welfare by choosing only tau_z, given fixed G, xi, and tau_w.
     """
-    def swf_obj_fixed_w(tau_z_scalar, G_val, xi_val, fw_arr):
+    p_a=p_a
+    def swf_obj_fixed_w(tau_z_scalar, G_val, xi_val, fw_arr, p_a):
         tau_z = tau_z_scalar[0] if isinstance(tau_z_scalar, (list, np.ndarray)) else tau_z_scalar
         try:
-            solution, results, converged = solver.solve(fw_arr, tau_z, G_val)
+            solution, results, converged = solver.solve(fw_arr, tau_z, G_val, p_a)
             if not converged:
                 return 1e10
             utilities = results['utilities']
@@ -68,7 +70,7 @@ def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
     try:
         result = minimize(swf_obj_fixed_w,
                           initial_tau_z_guess,
-                          args=(G, xi, fixed_tau_w_arr),
+                          args=(G, xi, fixed_tau_w_arr, p_a),
                           method='SLSQP',
                           bounds=tau_z_bounds,
                           options={'disp': False, 'ftol': 1e-15})
@@ -93,7 +95,7 @@ print("Running Scenario 1: Variable τ_w...")
 print("-" * 30)
 for xi_val in xi_values:
     try:
-        opt_tau_w, opt_tau_z, max_welfare_val = outer_solver.maximize_welfare(G_value, xi_val)
+        opt_tau_w, opt_tau_z, max_welfare_val = outer_solver.maximize_welfare(G_value, xi_val, p_a)
         tau_z_optimal_w_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
         valid_xi_optimal_w.append(xi_val)
     except Exception as e:
@@ -108,7 +110,7 @@ print(f"(Using fixed τ_w = {fixed_tau_w_preexisting})")
 print("-" * 30)
 for xi_val in xi_values:
     try:
-        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_preexisting)
+        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_preexisting, p_a)
         tau_z_fixed_preexisting_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
         valid_xi_fixed_preexisting.append(xi_val)
     except Exception as e:
@@ -123,7 +125,7 @@ print(f"(Using fixed τ_w = {fixed_tau_w_optimal_xi01})")
 print("-" * 30)
 for xi_val in xi_values:
     try:
-        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01)
+        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01, p_a)
         tau_z_fixed_optimal_xi01_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
         valid_xi_fixed_optimal_xi01.append(xi_val)
     except Exception as e:
@@ -155,19 +157,19 @@ mask3 = ~np.isnan(tau_z_fixed_optimal_xi01_results)
 if np.any(mask1):
     plt.plot(valid_xi_optimal_w[mask1],
              tau_z_optimal_w_results[mask1],
-             linestyle='-', label='Variable $\\tau_w$')
+             linestyle='-', label='Variable inc. tax')
 
 if np.any(mask2):
     plt.plot(valid_xi_fixed_preexisting[mask2],
              tau_z_fixed_preexisting_results[mask2],
-             linestyle='--', label='Fixed $\\tau_w$ (Pre-existing)')
+             linestyle='--', label='Fixed inc. tax (pre-existing)')
 
 if np.any(mask3):
     plt.plot(valid_xi_fixed_optimal_xi01[mask3],
              tau_z_fixed_optimal_xi01_results[mask3],
-             linestyle=':', label='Fixed $\\tau_w$ (Optimal at $\\xi=0.1$)')
+             linestyle=':', label='Fixed inc. tax (optimal at $\\xi=0.1$)')
 
-plt.xlim(0.1, 0.25)
+plt.xlim(0.1, 1.0)
 plt.xlabel(r'Environmental preference ($\xi$)', fontsize=14)
 plt.ylabel(r'Optimal environmental tax ($\tau_z$)', fontsize=14)
 plt.legend(loc='best')

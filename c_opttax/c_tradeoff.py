@@ -86,18 +86,18 @@ poll_smooth_opt = poll_spline_opt(tau_z_smooth)
 poll_slope_opt  = poll_spline_opt.derivative()(tau_z_smooth)
 
 # ─── Plot all curves together ─────────────────────────────────────────────────
-plt.figure(figsize=(7, 5))
+plt.figure(figsize=(8.5, 7))
 
 # (1) Flipped slopes of welfare-difference curves
 plt.plot(
     tau_z_smooth, -slope1,
     color='tab:orange', linestyle='--', linewidth=2,
-    label='Blue loss (pre-existing $\\tau_w$)'
+    label='Blue loss (pre-existing inc. tax)'
 )
 plt.plot(
     tau_z_smooth, -slope2,
     color='tab:green', linestyle=':', linewidth=2,
-    label='Blue loss (optimal $\\tau_w$ at $\\xi=0.1$)'
+    label='Blue loss (optimal inc. tax at $\\xi=0.1$)'
 )
 
 # (2) Flipped slopes of penalty term for three ξ (pre-existing in solid, optimal in dashed)
@@ -121,10 +121,16 @@ for xi_val, col in zip(xis, maroon_shades):
 # ─── Styling (unchanged) ─────────────────────────────────────────────────────
 plt.xlim(0.1, 20.0)
 plt.ylim(-0.25, 1.00)
-plt.xlabel(r'Environmental tax ($\tau_z$)', fontsize=14)
-plt.ylabel(r'Marginal welfare change', fontsize=14)
+plt.xlabel(r'Environmental tax ($\tau_z$)', fontsize=16)
+plt.ylabel(r'Marginal welfare change', fontsize=16)
 plt.grid(True, color='grey', linestyle='-', linewidth=0.3, alpha=0.5)
-plt.legend(loc='best', fontsize=8)
+plt.legend(
+    loc='upper center',
+    bbox_to_anchor=(0.5, -0.1),
+    ncol=2,
+    fontsize=12,
+    frameon=False
+)
 plt.tight_layout()
 
 # ─── Save & show ─────────────────────────────────────────────────────────────

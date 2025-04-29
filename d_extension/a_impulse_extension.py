@@ -5,16 +5,11 @@ import matplotlib.pyplot as plt
 import sys
 import os
 
-# --- MODIFIED: Ensure correct path and import LATEST inner_solver ---
-try:
-    # Import the latest inner_solver.py (with abatement + direct HH redist)
-    import inner_solver_ext as solver
-    from inner_solver_ext import n, phi, t as T # Import needed params
-except ImportError:
-    print("Error: Could not import 'inner_solver_ext'.") # Ensure filename is correct
-    print("Ensure the solver file exists and is accessible.")
-    exit()
-# --- End Import Modification ---
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+import a_solvers.inner_solver_ext as solver # Use alias solver
+from a_solvers.inner_solver_ext import n
 
 # a. Set policies
 tau_w_orig = np.array([0.015, 0.072, 0.115, 0.156, 0.24]) # Pre-existing

@@ -9,22 +9,12 @@ import matplotlib.gridspec as gridspec
 
 # --- MODIFIED: Ensure correct path and import LATEST inner_solver ---
 # Set up project root so we can import the solver
-# Adjust path logic if needed
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-
-try:
-    # Import the latest inner_solver_ext.py (with abatement + direct HH redist)
-    from inner_solver_ext import solve, phi, t, n, alpha, beta, gamma, d0, p_a # Import p_a as well
-except ImportError:
-    print("Error: Could not import 'inner_solver_ext'.")
-    print("Ensure the solver file exists and is accessible.")
-    exit()
-except AttributeError as e:
-    print(f"Fatal Error: A required parameter might be missing from 'inner_solver_ext.py': {e}")
-    exit()
-# --- End Import Modification ---
+import a_solvers.inner_solver_ext as solver # Use alias solver
+from a_solvers.inner_solver_ext import n, p_a, alpha, beta, gamma, t, d0, phi
 
 # --- Assert n=5 ---
 assert n == 5, "This script expects n=5 based on the imported inner_solver."
@@ -58,7 +48,7 @@ tau_z_baseline = 1.0 # Using same baseline as user code
 print("Calculating baseline equilibrium...")
 
 # -- Baseline for 'original' income tax combo (tau_w_init) --
-sol_base1, res_base1, conv_base1 = solve(tau_w_init, tau_z_baseline, g)
+sol_base1, res_base1, conv_base1 = solver.solve(tau_w_init, tau_z_baseline, g)
 if not conv_base1 or res_base1 is None:
     print("FATAL: Baseline model failed for tax system 1. Cannot proceed.")
     exit()
