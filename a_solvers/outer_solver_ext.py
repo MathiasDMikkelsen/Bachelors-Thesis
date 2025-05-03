@@ -9,13 +9,13 @@ T = 24
 theta = 1.0  # exponent on aggregate pollution in welfare penalty
 
 # b. maximize social welfare
-def maximize_welfare(G, xi, p_a):
+def maximize_welfare(G, xi, p_a, varsigma):
     # b1. define objective function
     def swf_obj(x):
         tau_w = x[0:n]
         tau_z = x[n]
         try:
-            solution, results, converged = solver.solve(tau_w, tau_z, G, p_a)
+            solution, results, converged = solver.solve(tau_w, tau_z, G, p_a, varsigma)
             if not converged:
                 return 1e10  # penalize inner layer non-convergence
             utilities = results['utilities']
@@ -30,7 +30,7 @@ def maximize_welfare(G, xi, p_a):
         tau_w = x[0:n]
         tau_z = x[n]
         try:
-            solution, results, converged = solver.solve(tau_w, tau_z, G, p_a)
+            solution, results, converged = solver.solve(tau_w, tau_z, G, p_a, varsigma)
             if not converged:
                 return -np.ones(n*(n-1)) * 1e6
             I = np.zeros(n)
@@ -102,11 +102,12 @@ if __name__ == "__main__":
     G = 5.0
     p_a = 5.0
     xi_example_value = 0.1
-    optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value, p_a)
+    varsigma = 2.0
+    optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value, p_a, varsigma)
 
     if optimal_tau_w is not None:
         print("\nresults at optimal tax rates:")
-        solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G, p_a)
+        solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G, p_a, varsigma)
 
         if converged:
             # Retain printing solution status/message even if 'sol' is nested under results

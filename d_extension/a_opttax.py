@@ -34,6 +34,7 @@ G_value = 5.0
 # Ensure theta is defined locally
 theta = 1.0
 p_a = 5.0
+varsigma = 2.0
 
 # Define the fixed τ_w set for scenario 2
 fixed_tau_w_preexisting = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
@@ -46,7 +47,7 @@ xi_values = np.linspace(0.1, 1.0, 10)
 # --- End Simulation Parameters ---
 
 # --- Function to optimize ONLY τ_z for FIXED τ_w (Unchanged) ---
-def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr, p_a):
+def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr, p_a, varsigma):
     """
     Optimizes social welfare by choosing only tau_z, given fixed G, xi, and tau_w.
     """
@@ -54,7 +55,7 @@ def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr, p_a):
     def swf_obj_fixed_w(tau_z_scalar, G_val, xi_val, fw_arr, p_a):
         tau_z = tau_z_scalar[0] if isinstance(tau_z_scalar, (list, np.ndarray)) else tau_z_scalar
         try:
-            solution, results, converged = solver.solve(fw_arr, tau_z, G_val, p_a)
+            solution, results, converged = solver.solve(fw_arr, tau_z, G_val, p_a, varsigma)
             if not converged:
                 return 1e10
             utilities = results['utilities']
@@ -95,7 +96,7 @@ print("Running Scenario 1: Variable τ_w...")
 print("-" * 30)
 for xi_val in xi_values:
     try:
-        opt_tau_w, opt_tau_z, max_welfare_val = outer_solver.maximize_welfare(G_value, xi_val, p_a)
+        opt_tau_w, opt_tau_z, max_welfare_val = outer_solver.maximize_welfare(G_value, xi_val, p_a, varsigma)
         tau_z_optimal_w_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
         valid_xi_optimal_w.append(xi_val)
     except Exception as e:
@@ -110,7 +111,7 @@ print(f"(Using fixed τ_w = {fixed_tau_w_preexisting})")
 print("-" * 30)
 for xi_val in xi_values:
     try:
-        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_preexisting, p_a)
+        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_preexisting, p_a, varsigma)
         tau_z_fixed_preexisting_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
         valid_xi_fixed_preexisting.append(xi_val)
     except Exception as e:
@@ -125,7 +126,7 @@ print(f"(Using fixed τ_w = {fixed_tau_w_optimal_xi01})")
 print("-" * 30)
 for xi_val in xi_values:
     try:
-        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01, p_a)
+        opt_tau_z, _ = maximize_welfare_fixed_w(G_value, xi_val, fixed_tau_w_optimal_xi01, p_a, varsigma)
         tau_z_fixed_optimal_xi01_results.append(opt_tau_z if opt_tau_z is not None else np.nan)
         valid_xi_fixed_optimal_xi01.append(xi_val)
     except Exception as e:
