@@ -1,163 +1,132 @@
 import numpy as np
 from scipy.optimize import minimize, NonlinearConstraint
 import inner_solver as solver
-from inner_solver import alpha, beta, gamma, d0, phi, n
+from inner_solver import alpha, beta, gamma, phi, n, epsilon_c, epsilon_d
 
 # a. parameters
-T = 24
-# xi = 0.1 # Removed this line
+T = 24.0
 theta = 1.0
 G = 5.0
 
-# b. maximize social welfare
-def maximize_welfare(G, xi): # <-- Changed this line only
+def maximize_welfare(G, xi, r, d0):
+    """
+    maximize social welfare given:
+      - G:   government spending
+      - xi:  environmental preference parameter
+      - r:   ces exponent
+      - d0:  baseline consumption of good d
+    returns: optimal (tau_w array, tau_z scalar, max_welfare)
+    """
 
-    # b1. define objective function
     def swf_obj(x):
+        tau_w, tau_z = x[:n], x[n]
+        _, results, conv = solver.solve(tau_w, tau_z, G, r, d0)
+        if not conv:
+            return 1e10
+        utils = results['utilities']
+        agg_z = results['z_c'] + results['z_d']
+        return -(np.sum(utils) - 5 * xi * (agg_z**theta))
 
-        tau_w = x[0:n]
-        tau_z = x[n]
-
-        try:
-            solution, results, converged = solver.solve(tau_w, tau_z, G)
-            if not converged:
-                return 1e10  # penalize inner layer non-convergence
-
-            utilities = results['utilities']
-            agg_polluting = results['z_c'] + results['z_d'] # extract inner layer solution
-
-            welfare = np.sum(utilities) - 5*xi * (agg_polluting**theta)
-            return -welfare  # calculate and return negative welfare
-
-        except Exception as e:
-            print(f"Solver failed with error: {e}")
-            return 1e10  # penalize inner layer failiure
-
-    # b2. define ic constraints
     def ic_constraints(x):
+        tau_w, tau_z = x[:n], x[n]
+        _, results, conv = solver.solve(tau_w, tau_z, G, r, d0)
+        if not conv:
+            return -np.ones(n*(n-1)) * 1e6
 
-        tau_w = x[0:n]
-        tau_z = x[n]
+        I = np.array([
+            (T - results['l_agents'][j]) * (1 - tau_w[j]) * phi[j] * results['w']
+            for j in range(n)
+        ])
 
-        try:
-            solution, results, converged = solver.solve(tau_w, tau_z, G)
-            if not converged:
-                return -np.ones(n*(n-1)) * 1e6  # penalize inner layer non-convergence
-
-            I = np.zeros(n)
+        g_list = []
+        for i in range(n):
+            U_i = results['utilities'][i]
             for j in range(n):
-                I[j] = (T - results['l_agents'][j])*(1.0 - tau_w[j])*phi[j]*results['w'] # compute income for hh j
+                if i == j:
+                    continue
+                c_j   = results['c_agents'][j]
+                d_j   = results['d_agents'][j]
+                denom = (1 - tau_w[j]) * phi[i] * results['w']
+                if denom == 0:
+                    g_list.append(-1e6)
+                    continue
+                ell_i_j = T - I[j] / denom
+                if ell_i_j <= 0 or c_j <= 0 or d_j <= d0:
+                    U_i_j = -1e6
+                else:
+                    U_i_j = (alpha * np.log(c_j) +
+                             beta  * np.log(d_j - d0) +
+                             gamma * np.log(ell_i_j))
+                g_list.append(U_i - U_i_j)
+        return np.array(g_list)
 
-            g_list = []
-
-            for i in range(n):
-                U_i = results['utilities'][i]
-                for j in range(n):
-                    if i == j:
-                        continue
-
-                    c_j = results['c_agents'][j]
-                    d_j = results['d_agents'][j] # retrieve consumption for hh j
-
-                    denom = (1.0 - tau_w[j]) * phi[i] * results['w']
-                    if denom == 0: # ial: changed from "<=0" to only avoid division by zero
-                        g_list.append(-1e6)
-                        continue
-
-                    ell_i_j = T - I[j] / denom # comute leisure for hh i pretending to be hh j
-
-                    if ell_i_j <= 0:
-                        U_i_j = -1e6 # throw away corner solutions
-                    else:
-                        if c_j <= 0 or d_j <= d0:
-                            U_i_j = -1e6 # throw away corner solutions
-                        else:
-                            U_i_j = (alpha * np.log(c_j) +
-                                     beta * np.log(d_j - d0) +
-                                     gamma * np.log(ell_i_j)) # calculate utility for hh i pretending to be hh j
-
-                    g_list.append(U_i - U_i_j) # return two ic constraints for each pair of hh
-
-            return np.array(g_list)
-
-        except Exception as e:
-            print(f"ic constraint evaluation failed with error: {e}")
-            return -np.ones(n*(n-1)) * 1e6  # penzlize if ic constraints cannot be evaluated
-
-    # b3. define ic constraints as a nonlinear constraint
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
-    # b4. initial guess.
-    initial_tau_w = [(0.0)]*n # actually guess does not matter much, model converges to same solution. choose initial_tau_w = [-2.5, -0.5, -0.2, 0.1, 0.5] if close to klenert
-    initial_tau_z = 0.5
-    initial_guess = np.array(initial_tau_w + [initial_tau_z])
-
-    # b5. bounds for tax rates
+    initial_guess = np.hstack((np.zeros(n), 0.5))
+    #initial_guess = [-2.5, -0.5, -0.2, 0.1, 0.5, 0.5]
     bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
 
-    # b6. minimize negative welfare using slsqp
-    result = minimize(swf_obj, initial_guess, method='SLSQP', bounds=bounds, constraints=[nonlinear_constraint])
+    result = minimize(
+        swf_obj,
+        initial_guess,
+        method='SLSQP',
+        bounds=bounds,
+        constraints=[nonlinear_constraint]
+    )
 
-    # b7. print results
     if result.success:
-        opt_tau_w = result.x[0:n]
-        opt_tau_z = result.x[n]
-        max_welfare = -result.fun
-
+        opt_tau_w   = result.x[:n]
+        opt_tau_z   = result.x[n]
+        max_welf    = -result.fun
         print("social welfare maximization successful")
         print("optimal tau_w:", opt_tau_w)
         print("optimal tau_z:", opt_tau_z)
-        print("maximized Social Welfare:", max_welfare)
-        return opt_tau_w, opt_tau_z, max_welfare
+        print("maximized social welfare:", max_welf)
+        return opt_tau_w, opt_tau_z, max_welf
     else:
         print("optimization failed")
         print("message:", result.message)
         return None, None, None
 
-# c. run optimization
-xi_example_value = 0.1 # Or any other example value you want to test
-optimal_tau_w, optimal_tau_z, max_welfare = maximize_welfare(G, xi_example_value)
+# c. run optimization for a test xi with r and d0
+xi_example = 0.1
+r_val       = -1.0
+d0_val      = 0.5
 
-if optimal_tau_w is not None:
-    print("\nresults at optimal tax rates:")
-    solution, results, converged = solver.solve(optimal_tau_w, optimal_tau_z, G)
+opt_tau_w, opt_tau_z, max_welf = maximize_welfare(G, xi_example, r_val, d0_val)
 
-    if converged:
-        print("solution status:", results["sol"].status)
+if opt_tau_w is not None:
+    sol_vec, results, conv = solver.solve(opt_tau_w, opt_tau_z, G, r_val, d0_val)
+    if conv:
+        # print basic solution info
+        print("\nsolution status:", results["sol"].status)
         print("solution message:", results["sol"].message)
-        print("solution vector [T_C, T_D, Z_C, Z_D, w, p_D, L]:")
-        print(solution)
+        print("solution vector [t_c, t_d, log_z_c, log_z_d, w, p_d, l]:")
+        print(sol_vec)
 
-        print("\nproduction Summary:")
-        print(f"sector C: T_prod = {results['t_c']:.4f}, z_c = {results['z_c']:.4f}")
-        print(f"sector D: T_prod = {results['t_d']:.4f}, z_d = {results['z_d']:.4f}")
-        print(f"common wage, w = {results['w']:.4f}, p_D = {results['p_d']:.4f}")
-        print(f"sector C output, F_C = {results['f_c']:.4f}")
-        print(f"sector D output, F_D = {results['f_c']:.4f}")
+        # --- print all residuals ---
+        residuals = results["system_residuals"]
+        for idx, val in enumerate(residuals, start=1):
+            print(f"eq{idx} residual: {val:.6e}")
 
-        print("\nhousehold Demands and Leisure:")
-        for i in range(n):
-            print(f"household {i+1}: c = {results['c_agents'][i]:.4f}, D = {results['d_agents'][i]:.4f}, l = {results['l_agents'][i]:.4f}")
+        # government budget eq7 residual
+        print(f"gov budget residual (eq7): {residuals[6]:.6e}")
 
-        print("\naggregated Quantities:")
-        print(f"aggregate c = {results['agg_c']:.4f}")
-        print(f"aggregate d = {results['agg_d']:.4f}")
-        print(f"aggregate labor supply = {results['agg_labor']:.4f}")
+        # firm c condition
+        w   = results['w']
+        tau_z = opt_tau_z
+        expected_c = (((1 - epsilon_c) * w) / (tau_z * epsilon_c)) ** (1/(r_val-1))
+        comp_c     = results['t_c'] / results['z_c']
+        print(f"firm c: t_c/z_c = {comp_c:.6e}, expected = {expected_c:.6e}, residual = {(comp_c-expected_c):.6e}")
 
-        print("\nlump sum:")
-        print(f"l = {results['l']:.4f}")
+        # firm d condition
+        expected_d = (((1 - epsilon_d) * w) / (tau_z * epsilon_d)) ** (1/(r_val-1))
+        comp_d     = results['t_d'] / results['z_d']
+        print(f"firm d: t_d/z_d = {comp_d:.6e}, expected = {expected_d:.6e}, residual = {(comp_d-expected_d):.6e}")
 
-        print("\nfirm profits:")
-        print(f"profit c: {results['profit_c']:.4f}")
-        print(f"profit d: {results['profit_d']:.4f}")
+        # aggregate pollution
+        agg_z = results['z_c'] + results['z_d']
+        print(f"aggregate pollution (z_c+z_d): {agg_z:.4f}")
 
-        print("\nhousehold budget constraints:")
-        for i in range(n):
-            print(f"household {i+1}: error = {results['budget_errors'][i]:.10f}")
-
-        print(f"\ngood c market clearing residual: {(results['agg_c'] + 0.5*G) - results['f_c']:.10f}")
     else:
         print("inner solver did not converge at optimal tax rates")
-
-    agg_polluting = results['z_c'] + results['z_d']
-effective_utilities = results['utilities']
