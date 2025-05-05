@@ -62,8 +62,8 @@ def maximize_welfare(G, xi, r, d0):
 
     nonlinear_constraint = NonlinearConstraint(ic_constraints, lb=0, ub=np.inf)
 
-    initial_guess = np.hstack((np.zeros(n), 0.5))
-    #initial_guess = [-2.5, -0.5, -0.2, 0.1, 0.5, 0.5]
+    #initial_guess = np.hstack((np.zeros(n), 0.5))
+    initial_guess = [-2.5, -0.5, -0.2, 0.1, 0.5, 0.5]
     bounds = [(-10.0, 10.0)] * n + [(1e-6, 100.0)]
 
     result = minimize(

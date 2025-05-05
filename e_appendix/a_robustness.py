@@ -111,7 +111,7 @@ plt.tight_layout()
 plt.savefig('e_appendix/b_robustness_g.pdf', bbox_inches='tight')
 
 # sensitivity to d0
-d0_values = [0.3, 0.4, 0.6, 0.7]
+d0_values = [0.4, 0.45, 0.55 ,0.6]
 fig2, axes2 = plt.subplots(2, 2, figsize=(10, 7.5))
 for ax, d0_val in zip(axes2.flat, d0_values):
     xi, tz1, tz2, tz3 = compute_tau_z_series(G_base, r_base, d0_val)
