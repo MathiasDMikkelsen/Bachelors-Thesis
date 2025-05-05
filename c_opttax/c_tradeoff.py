@@ -1,212 +1,139 @@
-# plot_revenue_comparison_2scen.py (Legend in Two Rows Version + Preexisting‐tax Figure)
+# plot_slopes_and_penalty_slope.py
+#
+# Computes and plots:
+#  1) –Slopes of the two aggregate welfare‐difference curves
+#     (pre‐existing τ_w vs. optimal τ_w at ξ=0.1), flipped by –1
+#  2) –Slope of the penalty term d/dτ_z[5·ξ·(z_c + z_d)] for ξ ∈ {0.1, 0.55, 1.0}
+# against τ_z, all in one figure with the original styling.
+# Only three lines (marked +++) have been added to plot the penalty curves for the optimal τ_w system.
 
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import sys
-from scipy.optimize import minimize
-import matplotlib as mpl   # only needed once, before any figures are created
+import matplotlib as mpl
+from scipy.interpolate import make_interp_spline
+import sys, os
 
-# —————————————————————————————————————————————————————————————————————————————
-# LaTeX styling
-# —————————————————————————————————————————————————————————————————————————————
+# ─── Matplotlib LaTeX setup ───────────────────────────────────────────────────
 mpl.rcParams.update({
     "text.usetex": True,
     "font.family":  "serif",
-    "font.serif":  ["Palatino"],
+    "font.serif":   ["Palatino"],
     "text.latex.preamble": r"""
-        \PassOptionsToPackage{sc}{mathpazo}  % give mathpazo the 'sc' option
+        \PassOptionsToPackage{sc}{mathpazo}
         \linespread{1.5}
         \usepackage[T1]{fontenc}
     """,
 })
 
-# —————————————————————————————————————————————————————————————————————————————
-# Project setup: add solver paths
-# —————————————————————————————————————————————————————————————————————————————
-project_root  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-a_solvers_dir = os.path.join(project_root, "a_solvers")
-for p in (project_root, a_solvers_dir):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from a_solvers.inner_solver import solve, n
 
-from a_solvers import outer_solver
-import a_solvers.inner_solver as solver
-from a_solvers.inner_solver import n, alpha, beta, gamma, d0, phi, t as T
+# ─── Parameters & grids ───────────────────────────────────────────────────────
+g              = 5.0
+tau_w_init     = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
+tau_w_opt      = np.array([-1.12963781, -0.06584074, 0.2043803, 0.38336986, 0.63241591])
+tau_z_values   = np.linspace(0.1, 20.0, 100)
+tau_z_smooth   = np.linspace(tau_z_values.min(), tau_z_values.max(), 300)
+tau_z_baseline = 0.1
+d0 = 0.5
+r = -1.0
 
-# —————————————————————————————————————————————————————————————————————————————
-# Parameters & helper
-# —————————————————————————————————————————————————————————————————————————————
-G_value   = 5.0
-theta     = 1.0
+# ─── Baseline utilities at τ_z = 0.1 ───────────────────────────────────────────
+_, res1, c1 = solve(tau_w_init, tau_z_baseline, g, r, d0)
+_, res2, c2 = solve(tau_w_opt,   tau_z_baseline, g, r, d0)
+if not (c1 and c2):
+    raise RuntimeError("Baseline did not converge.")
+u0_1 = res1["utilities"]
+u0_2 = res2["utilities"]
 
-# new arguments for the solvers
-r_base    = -1.0      # CES exponent
-d0_base   = d0        # imported from inner_solver
+# ─── Compute aggregate welfare differences ─────────────────────────────────────
+agg_diff1 = np.zeros_like(tau_z_values)
+agg_diff2 = np.zeros_like(tau_z_values)
+for j, tz in enumerate(tau_z_values):
+    _, r1, conv1 = solve(tau_w_init, tz, g, r, d0)
+    _, r2, conv2 = solve(tau_w_opt,  tz, g, r, d0)
+    u1 = r1["utilities"] if conv1 else u0_1
+    u2 = r2["utilities"] if conv2 else u0_2
+    agg_diff1[j] = np.sum(u1 - u0_1)
+    agg_diff2[j] = np.sum(u2 - u0_2)
 
-# pre‐computed “optimal” fixed‐τ_w at ξ=0.1
-fixed_tau_w_optimal_xi01 = np.array([
-    -1.12963781, -0.06584074,  0.2043803,
-     0.38336986,  0.63241591
-])
+# ─── Smooth and differentiate welfare curves ──────────────────────────────────
+spl1   = make_interp_spline(tau_z_values, agg_diff1)
+spl2   = make_interp_spline(tau_z_values, agg_diff2)
+slope1 = spl1.derivative()(tau_z_smooth)
+slope2 = spl2.derivative()(tau_z_smooth)
 
-# ξ grid for plotting
-xi_values = np.linspace(0.1, 1.0, 25)
+# ─── Compute aggregate pollution for pre-existing τ_w ─────────────────────────
+agg_poll = np.zeros_like(tau_z_values)
+for j, tz in enumerate(tau_z_values):
+    _, rp, convp = solve(tau_w_init, tz, g, r, d0)
+    if not convp:
+        raise RuntimeError(f"Did not converge at τ_z = {tz:.3f}")
+    agg_poll[j] = rp["z_c"] + rp["z_d"]
 
-def maximize_welfare_fixed_w(G, xi, fixed_tau_w_arr):
-    """
-    Given a fixed schedule of τ_w, find the τ_z that maximizes welfare,
-    using the updated inner_solver.solve signature.
-    """
-    def swf_obj_fixed_w(tau_z_arr, G_val, xi_val, fw_arr):
-        tau_z = float(tau_z_arr[0])
-        _, res, converged = solver.solve(fw_arr, tau_z, G_val, r_base, d0_base)
-        if not converged:
-            return 1e10
-        utilities   = res['utilities']
-        agg_pollute = res['z_c'] + res['z_d']
-        welfare     = np.sum(utilities) - 5 * xi_val * (agg_pollute**theta)
-        return -welfare
+# ─── Smooth pollution curve and compute its derivative ───────────────────────
+poll_spline  = make_interp_spline(tau_z_values, agg_poll)
+poll_smooth  = poll_spline(tau_z_smooth)
+poll_slope   = poll_spline.derivative()(tau_z_smooth)
 
-    result = minimize(
-        swf_obj_fixed_w,
-        x0=[0.5],
-        args=(G, xi, fixed_tau_w_arr),
-        bounds=[(1e-6, 100)],
-        method='SLSQP',
-        options={'ftol': 1e-7}
-    )
-    if result.success:
-        return result.x[0], -result.fun
-    else:
-        return None, None
+# +++ Compute pollution & slope for optimal τ_w +++
+agg_poll_opt = np.zeros_like(tau_z_values)
+for j, tz in enumerate(tau_z_values):
+    _, rp_opt, convp_opt = solve(tau_w_opt, tz, g, r, d0)
+    agg_poll_opt[j] = (rp_opt["z_c"] + rp_opt["z_d"]) if convp_opt else agg_poll_opt[j]
+poll_spline_opt = make_interp_spline(tau_z_values, agg_poll_opt)
+poll_smooth_opt = poll_spline_opt(tau_z_smooth)
+poll_slope_opt  = poll_spline_opt.derivative()(tau_z_smooth)
 
-# —————————————————————————————————————————————————————————————————————————————
-# 1) Compute & plot: “variable τ_w” vs. “optimal‐fixed τ_w”
-# —————————————————————————————————————————————————————————————————————————————
-rev_var_env, rev_var_inc, rev_var_tot = [], [], []
-rev_fix_env, rev_fix_inc, rev_fix_tot = [], [], []
-valid_xi = []
+# ─── Plot all curves together ─────────────────────────────────────────────────
+plt.figure(figsize=(8.5, 7))
 
-for xi in xi_values:
-    valid_xi.append(xi)
-
-    # — Variable τ_w scenario —————————————————————————————
-    opt_tw, opt_tz, _ = outer_solver.maximize_welfare(G_value, xi, r_base, d0_base)
-    _, res_var, conv = solver.solve(opt_tw, opt_tz, G_value, r_base, d0_base)
-    if conv:
-        rev_var_env.append(opt_tz * (res_var['z_c'] + res_var['z_d']))
-        labor_inc = phi * res_var['w'] * np.maximum(T - res_var['l_agents'], 0)
-        rev_var_inc.append(np.sum(opt_tw * labor_inc))
-        rev_var_tot.append(rev_var_env[-1] + rev_var_inc[-1])
-    else:
-        rev_var_env.append(np.nan)
-        rev_var_inc.append(np.nan)
-        rev_var_tot.append(np.nan)
-
-    # — Fixed τ_w scenario (opt. at ξ=0.1) —————————————————————
-    opt_tz_fix, _ = maximize_welfare_fixed_w(G_value, xi, fixed_tau_w_optimal_xi01)
-    _, res_fix, conv2 = solver.solve(
-        fixed_tau_w_optimal_xi01, opt_tz_fix, G_value, r_base, d0_base
-    )
-    if conv2:
-        rev_fix_env.append(opt_tz_fix * (res_fix['z_c'] + res_fix['z_d']))
-        labor_inc2 = phi * res_fix['w'] * np.maximum(T - res_fix['l_agents'], 0)
-        rev_fix_inc.append(np.sum(fixed_tau_w_optimal_xi01 * labor_inc2))
-        rev_fix_tot.append(rev_fix_env[-1] + rev_fix_inc[-1])
-    else:
-        rev_fix_env.append(np.nan)
-        rev_fix_inc.append(np.nan)
-        rev_fix_tot.append(np.nan)
-
-# — Plot figure 1 —————————————————————————————————————————————————————————————
-fig, ax = plt.subplots(figsize=(7, 7))
-
-# Variable τ_w lines
-ax.plot(valid_xi, rev_var_tot, '-.', linewidth=2, color='steelblue',
-        label='Total (var. inc. tax)')
-ax.plot(valid_xi, rev_var_env, '-',  linewidth=2, color='steelblue',
-        label='Env. (var. inc. tax)')
-ax.plot(valid_xi, rev_var_inc, '--', linewidth=2, color='steelblue',
-        label='Inc. (var. inc. tax)')
-
-# Fixed τ_w lines
-ax.plot(valid_xi, rev_fix_tot, '-.', linewidth=2, color='tab:green',
-        label='Total (baseline opt. fixed inc tax.)')
-ax.plot(valid_xi, rev_fix_env, '-',  linewidth=2, color='tab:green',
-        label='Env. (baseline opt. fixed inc tax.)')
-ax.plot(valid_xi, rev_fix_inc, '--', linewidth=2, color='tab:green',
-        label='Inc. (baseline opt. fixed inc tax.)')
-
-# Government spending
-ax.axhline(G_value, color='gray', linestyle='-', linewidth=2,
-           label=r'Gov. spending')
-
-# Styling
-ax.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
-ax.set_xlabel(r'Environmental preference ($\xi$)', fontsize=14)
-ax.set_ylabel('Revenue', fontsize=14)
-ax.set_xlim(xi_values[0], xi_values[-1])
-
-# Legend in two rows below
-ax.legend(
-    loc='upper center',
-    bbox_to_anchor=(0.5, -0.125),
-    ncol=4,
-    frameon=False,
-    fontsize=10
+# (1) Flipped slopes of welfare-difference curves
+plt.plot(
+    tau_z_smooth, -slope1,
+    color='tab:orange', linestyle='--', linewidth=2,
+    label='Blue loss (pre-existing inc. tax)'
+)
+plt.plot(
+    tau_z_smooth, -slope2,
+    color='tab:green', linestyle=':', linewidth=2,
+    label='Blue loss (optimal inc. tax at $\\xi=0.1$)'
 )
 
-plt.subplots_adjust(bottom=0.30, right=0.98)
-plt.savefig("c_opttax/b_revenue.pdf", bbox_inches='tight')
+# (2) Flipped slopes of penalty term for three ξ (pre-existing in solid, optimal in dashed)
+xis = [0.1, 0.55, 1.0]
+maroon_shades = ['#f2dede', '#c9302c', '#7b1113']
+for xi_val, col in zip(xis, maroon_shades):
+    # pre-existing τ_w
+    plt.plot(
+        tau_z_smooth,
+        -5 * xi_val * poll_slope,
+        color=col, linestyle='-', linewidth=2,
+        label=f'Green benefit, pre-existing inc. tax ($\\xi={xi_val}$)'
+    )
+    # optimal τ_w (no extra legend entry)
+    plt.plot(
+        tau_z_smooth,
+        -5 * xi_val * poll_slope_opt,
+        color=col, linestyle='--', label=f'Green benefit, baseline opt. inc tax ($\\xi={xi_val}$)', linewidth=2
+    )
 
-
-# —————————————————————————————————————————————————————————————————————————————
-# 2) Compute & plot: “preexisting τ_w” schedule
-# —————————————————————————————————————————————————————————————————————————————
-pre_tau_w = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
-rev_pre_env, rev_pre_inc, rev_pre_tot = [], [], []
-
-for xi in xi_values:
-    opt_tz_pre, _ = maximize_welfare_fixed_w(G_value, xi, pre_tau_w)
-    _, res_pre, conv3 = solver.solve(pre_tau_w, opt_tz_pre, G_value, r_base, d0_base)
-    if conv3:
-        e = opt_tz_pre * (res_pre['z_c'] + res_pre['z_d'])
-        inc = phi * res_pre['w'] * np.maximum(T - res_pre['l_agents'], 0)
-        i = np.sum(pre_tau_w * inc)
-        rev_pre_env.append(e)
-        rev_pre_inc.append(i)
-        rev_pre_tot.append(e + i)
-    else:
-        rev_pre_env.append(np.nan)
-        rev_pre_inc.append(np.nan)
-        rev_pre_tot.append(np.nan)
-
-# — Plot figure 2 —————————————————————————————————————————————————————————————
-fig2, ax2 = plt.subplots(figsize=(7, 7))
-
-ax2.plot(xi_values, rev_pre_tot, '-.', linewidth=2, color='tab:orange',
-         label='Total (pre-existing inc. tax)')
-ax2.plot(xi_values, rev_pre_env,  '-', linewidth=2, color='tab:orange',
-         label='Env. (pre-existing inc. tax)')
-ax2.plot(xi_values, rev_pre_inc,  '--', linewidth=2, color='tab:orange',
-         label='Inc. (pre-existing inc. tax)')
-
-ax2.axhline(G_value, color='gray', linestyle='-', linewidth=2,
-           label=r'Gov. spending')
-
-ax2.grid(True, color='grey', linestyle='--', linewidth=0.3, alpha=0.5)
-ax2.set_xlabel(r'Environmental preference ($\xi$)', fontsize=14)
-ax2.set_ylabel('Revenue', fontsize=14)
-ax2.set_xlim(xi_values[0], xi_values[-1])
-
-ax2.legend(
+# ─── Styling (unchanged) ─────────────────────────────────────────────────────
+plt.xlim(0.1, 20.0)
+plt.ylim(-0.25, 1.00)
+plt.xlabel(r'Environmental tax ($\tau_z$)', fontsize=16)
+plt.ylabel(r'Marginal welfare change', fontsize=16)
+plt.grid(True, color='grey', linestyle='-', linewidth=0.3, alpha=0.5)
+plt.legend(
     loc='upper center',
-    bbox_to_anchor=(0.5, -0.125),
-    ncol=3,
-    frameon=False,
-    fontsize=10
+    bbox_to_anchor=(0.5, -0.1),
+    ncol=2,
+    fontsize=12,
+    frameon=False
 )
+plt.tight_layout()
 
-plt.subplots_adjust(bottom=0.30, right=0.98)
-plt.savefig("e_appendix/a_revenue_preexisting.pdf", bbox_inches='tight')
+# ─── Save & show ─────────────────────────────────────────────────────────────
+plt.savefig("c_opttax/c_tradeoff.pdf", bbox_inches='tight')
