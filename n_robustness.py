@@ -75,7 +75,7 @@ color_var = 'steelblue'
 color_pre = 'tab:orange'
 color_opt = 'tab:green'
 
-g_values = [1.5, 3.0, 7.0, 9.5]
+g_values = [4.0, 4.5, 5.5, 6.0]
 fig1, axes1 = plt.subplots(2, 2, figsize=(10, 7.5))
 for ax, G in zip(axes1.flat, g_values):
     xi, tz1, tz2, tz3 = compute_tau_z_series(G, r_base, d0_base)
