@@ -26,12 +26,12 @@ tau_w     = np.array([0.015, 0.072, 0.115, 0.156, 0.24])
 tau_w_alt = np.array([-1.12963771, -0.06584069, 0.20438033, 0.38336989, 0.63241592])
 g         = 5.0
 
-def E_star(p_d, U_target):
+def E_star(p_d, w, U_target):
     A = alpha + beta + gamma
-    return (A/alpha) * np.exp((U_target
-                               - beta*np.log(beta/(alpha*p_d))
-                               - gamma*np.log(gamma/alpha)) / A) \
-           + p_d*d0
+    return A * np.exp(U_target / A) \
+        * (1/alpha)**(alpha / A) \
+        * (p_d / beta)**(beta / A) \
+        * (w   / gamma)**(gamma / A) + p_d*d0
 
 tau_z_baseline = 1.0
 sol_b1, res_b1, c1 = solve(tau_w,     tau_z_baseline, g, r, d0)
@@ -50,12 +50,12 @@ c_b2, d_b2   = res_b2["c_agents"], res_b2["d_agents"]
 U_b1 = alpha*np.log(c_b1) + beta*np.log(d_b1 - d0) + gamma*np.log(l_agents_b1)
 U_b2 = alpha*np.log(c_b2) + beta*np.log(d_b2 - d0) + gamma*np.log(l_agents_b2)
 
-base_exp1 = np.array([E_star(p_d_b1, U_b1[i]) for i in range(n)])
+base_exp1 = np.array([E_star(p_d_b1, w_b1, U_b1[i]) for i in range(n)])
 base_inc1 = np.array([
     phi[i]*w_b1*(1-tau_w[i])*(t-l_agents_b1[i]) + res_b1["l"]
     for i in range(n)
 ])
-base_exp2 = np.array([E_star(p_d_b2, U_b2[i]) for i in range(n)])
+base_exp2 = np.array([E_star(p_d_b2, w_b2, U_b2[i]) for i in range(n)])
 base_inc2 = np.array([
     phi[i]*w_b2*(1-tau_w_alt[i])*(t-l_agents_b2[i]) + res_b2["l"]
     for i in range(n)
@@ -77,7 +77,7 @@ for j, tz in enumerate(tau_z_values):
     if not c1: continue
     U1 = r1["utilities"]
     for i in range(n):
-        CV_rel1[i,j]      = (E_star(r1["p_d"], U_b1[i]) - base_exp1[i]) / base_inc1[i]
+        CV_rel1[i,j]      = (E_star(r1["p_d"], r1["w"], U_b1[i]) - base_exp1[i]) / base_inc1[i]
         inc_ch1[i,j]      = phi[i]*r1["w"]*(1-tau_w[i])*(t-r1["l_agents"][i]) + r1["l"] - base_inc1[i]
         util_ch_exp1[i,j] = np.exp(U1[i]) - np.exp(U_b1[i])
         util_ch_log1[i,j] = U1[i] - U_b1[i]
@@ -86,7 +86,7 @@ for j, tz in enumerate(tau_z_values):
     if not c2: continue
     U2 = r2["utilities"]
     for i in range(n):
-        CV_rel2[i,j]      = (E_star(r2["p_d"], U_b2[i]) - base_exp2[i]) / base_inc2[i]
+        CV_rel2[i,j]      = (E_star(r2["p_d"], r2["w"], U_b2[i]) - base_exp2[i]) / base_inc2[i]
         inc_ch2[i,j]      = phi[i]*r2["w"]*(1-tau_w_alt[i])*(t-r2["l_agents"][i]) + r2["l"] - base_inc2[i]
         util_ch_exp2[i,j] = np.exp(U2[i]) - np.exp(U_b2[i])
         util_ch_log2[i,j] = U2[i] - U_b2[i]
@@ -133,7 +133,7 @@ for i in range(n):
     ax2.plot(tau_z_values, util_ch_exp2[i], '--', lw=lw, color=colors[i])
 ax2.axhline(0, color='grey', linewidth=2.5)
 ax2.set(xlabel=r'Environmental tax ($\tau_z$)',
-        title='Change in exp utility')
+        title='Change in blue utility')
 ax2.tick_params(labelsize=12)
 ax2.set_xlim(tau_z_values[0], tau_z_values[-1])
 ax2.yaxis.set_label_coords(-0.15,0.5)
@@ -145,7 +145,7 @@ for i in range(n):
     ax3.plot(tau_z_values, util_ch_log2[i], '--', lw=lw, color=colors[i])
 ax3.axhline(0, color='grey', linewidth=2.5)
 ax3.set(xlabel=r'Environmental tax ($\tau_z$)',
-        title='Change in log utility')
+        title='Change in log blue utility')
 ax3.tick_params(labelsize=12)
 ax3.set_xlim(tau_z_values[0], tau_z_values[-1])
 ax3.yaxis.set_label_coords(-0.15,0.5)
