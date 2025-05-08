@@ -147,4 +147,5 @@ fig.legend(
 )
 
 plt.tight_layout(rect=[0, 0.05, 1, 1])
+
 plt.savefig("x_figs/fig1_key_variables.pdf")
