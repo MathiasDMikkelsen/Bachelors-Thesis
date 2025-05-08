@@ -121,17 +121,17 @@ mask3 = ~np.isnan(tau_z_fixed_optimal_xi01_results)
 
 if np.any(mask1):
     plt.plot(valid_xi_optimal_w[mask1],
-             tau_z_optimal_w_results[mask1],
+             tau_z_optimal_w_results[mask1], linewidth=2,
              linestyle='-', label='Variable inc. tax')
 
 if np.any(mask2):
     plt.plot(valid_xi_fixed_preexisting[mask2],
-             tau_z_fixed_preexisting_results[mask2],
+             tau_z_fixed_preexisting_results[mask2], linewidth=2,
              linestyle='--', label='Fixed inc. tax (pre-existing)')
 
 if np.any(mask3):
     plt.plot(valid_xi_fixed_optimal_xi01[mask3],
-             tau_z_fixed_optimal_xi01_results[mask3],
+             tau_z_fixed_optimal_xi01_results[mask3], linewidth=2,
              linestyle=':', label='Fixed inc. tax (optimal at $\\xi=0.1$)')
 
 plt.xlim(0.1, 1.0)
